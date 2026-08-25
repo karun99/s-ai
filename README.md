@@ -317,6 +317,6 @@ import { getBhashiniTools } from '@saikarun/s-ai/bhashini/tools';
 
 ## License
 
-MIT — Copyright (c) 2026 nsk
+MIT — Copyright (c) 2026 Sai Karun Nandipati 
 
 See [LICENSE](LICENSE) for the full text.
