@@ -1,4 +1,4 @@
-# S-AI v5.1 — Multi-Agent Swarm Intelligence
+# S-AI v6.0 — Synthetic Executive
 
 [![npm version](https://img.shields.io/npm/v/@saikarun/s-ai?color=6366f1&label=version)](https://www.npmjs.com/package/@saikarun/s-ai)
 [![npm downloads](https://img.shields.io/npm/dm/@saikarun/s-ai?color=22c55e)](https://www.npmjs.com/package/@saikarun/s-ai)
@@ -8,7 +8,9 @@
 
 > **Published:** [`@saikarun/s-ai`](https://www.npmjs.com/package/@saikarun/s-ai) | **License:** MIT | **Platform:** Node.js >= 18 | **Module:** ESM (TypeScript)
 
-A CLI-first multi-agent swarm system with **neural mapping (Digital Twin persona adaptation)**, **MCP Builder** (resource-efficient template-based MCP server creation), **Skill Creator** (customizable modular skill composition), **Research Mapper (Paperscape-style arXiv visualization)**, **Study Buddy (AI tutoring with gamified learning)**, **Bhashini multilingual AI**, crawl4ai web scraping, MCP integration, knowledge graph, and bias-reduced consensus.
+A CLI-first multi-agent swarm system with **execution layer** (policy-gated tool execution with approval), **neural mapping (Digital Twin persona adaptation)**, **MCP Builder** (resource-efficient template-based MCP server creation), **Skill Creator** (customizable modular skill composition), **Research Mapper (Paperscape-style arXiv visualization)**, **Study Buddy (AI tutoring with gamified learning)**, **Bhashini multilingual AI**, crawl4ai web scraping, MCP integration, knowledge graph, and bias-reduced consensus.
+
+**v6.0 New:** The swarm now thinks *and* acts — it produces execution plans with risk-rated actions that go through approval gates before execution. S-AI evolves from a reasoning engine into a full-fledged autonomous assistant.
 
 **No advanced hardware required** — runs on any device with a browser or Node.js. Zero inference cost with OpenRouter free models. Your data stays on your device.
 
@@ -210,11 +212,17 @@ services:
     restart: unless-stopped
 ```
 
-## What's in v5.1
+## What's in v6.0
 
 | Feature | Status |
 |---------|--------|
 | 6-agent swarm with bias-reduced consensus | Done |
+| **Execution Layer** (policy-gated tool execution) | **New in 6.0** |
+| **7-agent swarm** (added Action Planner) | **New in 6.0** |
+| **Tool Registry** (15+ tools with risk levels) | **New in 6.0** |
+| **Execution Engine** (plan → approve → execute → audit) | **New in 6.0** |
+| **Daemon mode** (headless service with scheduled jobs) | **New in 6.0** |
+| **Audit log** (JSONL audit trail for all actions) | **New in 6.0** |
 | Neural mapping (Digital Twin persona) | Done |
 | 20+ AI provider support | Done |
 | crawl4ai web scraping | Done |
@@ -473,7 +481,8 @@ Read the full case study: [`docs/case-study-ornith-1.5.md`](docs/case-study-orni
 ## CLI Commands
 
 ```
-Core:        s-ai ask | setup | serve | status | help
+Core:        s-ai ask | setup | serve | daemon | status | help
+Execution:   s-ai tools | plan | execute | approve | deny | audit
 Neural:      s-ai persona set | show | clear | node | profiles
 Swarm:       s-ai swarm status | reset | agents
 Graph:       s-ai graph query | stats | store
@@ -494,16 +503,31 @@ OpenRouter (100+ models), OpenAI, Anthropic, Google AI, Ollama (local), Nvidia, 
 ## Programmatic Usage
 
 ```typescript
-import { Swarm, NeuralMap, searchArxiv, buildCitationGraph, getBhashiniProvider } from '@saikarun/s-ai';
+import { Swarm, NeuralMap, ExecutionEngine, listToolMeta, searchArxiv, buildCitationGraph, getBhashiniProvider } from '@saikarun/s-ai';
 
 // Neural mapping
 const neuralMap = getNeuralMap();
 neuralMap.setProfile({ name: 'Alice', bio: 'Senior architect' });
 
-// Swarm
+// Swarm with execution planning
 const swarm = new Swarm();
 swarm.setPersonaContext(neuralMap.buildPersonaContext());
 const result = await swarm.run('Should we use microservices?');
+console.log(result.executionPlan); // Actions proposed by the swarm
+
+// Execution Engine
+const execEngine = new ExecutionEngine({ autoApproveLowRisk: true });
+const plan = execEngine.createPlan(
+  [{ tool: 'readFile', params: { path: '/tmp/data.json' }, reason: 'Load data' }],
+  'Read data file', 0.9, 2, 1500
+);
+const report = await execEngine.executePlan(plan, async (tool, params) => {
+  return await runTool(tool, params);
+});
+
+// Tool Registry
+const tools = listToolMeta();
+tools.forEach(t => console.log(`${t.name}: ${t.riskLevel} (${t.category})`));
 
 // Research Mapper
 const arxivResult = await searchArxiv('quantum machine learning', 0, 10);
@@ -537,6 +561,11 @@ import { KnowledgeGraph } from '@saikarun/s-ai/graph';
 import { CrawlEngine } from '@saikarun/s-ai/crawl';
 import { createSwarmMcpServer } from '@saikarun/s-ai/mcp';
 import { getMcpClientManager } from '@saikarun/s-ai/mcp/client';
+
+// Execution Layer (v6.0)
+import { ExecutionEngine } from '@saikarun/s-ai/execution';
+import { getToolMeta, listToolMeta, getToolsByRisk } from '@saikarun/s-ai/execution/registry';
+import type { ActionProposal, ExecutionPlan, RiskLevel } from '@saikarun/s-ai/execution/types';
 
 // Research Mapper (v5.1)
 import { searchArxiv, buildCitationGraph } from '@saikarun/s-ai/arxiv';

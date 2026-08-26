@@ -120,6 +120,20 @@ class KnowledgeGraph {
   getStats(): GraphStats {
     return { nodes: this.graph.nodes.length, edges: this.graph.edges.length, types: Object.keys(this.graph.indexes.byType), version: this.graph.version };
   }
+
+  getHistory(limit: number = 50): Array<{ role: string; content: string; timestamp?: string }> {
+    const conversations = this.graph.nodes.filter(n => n.type === 'user_message' || n.type === 'ai_reply');
+    conversations.sort((a, b) => {
+      const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return bTime - aTime;
+    });
+    return conversations.slice(0, limit).map(n => ({
+      role: n.type === 'user_message' ? 'user' : 'assistant',
+      content: n.content || n.label,
+      timestamp: n.timestamp
+    }));
+  }
 }
 
 let _instance: KnowledgeGraph | null = null;

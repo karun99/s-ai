@@ -31,6 +31,10 @@ interface RunResult {
   elapsed: number;
   agents: Array<{ name: string; role: string; metrics: { tokens: number; cost: number; calls: number; errors: number } }>;
   consensus: number;
+  executionPlan?: {
+    actions: Array<{ tool: string; params: Record<string, unknown>; reason: string }>;
+    rationale: string;
+  };
 }
 
 interface SwarmStatus {
@@ -47,6 +51,7 @@ interface StreamEvent {
   token?: string;
   round?: number;
   score?: number;
+  executionPlan?: { actions: Array<{ tool: string; params: Record<string, unknown>; reason: string }>; rationale: string };
 }
 
 class Swarm extends EventEmitter {
@@ -74,6 +79,7 @@ class Swarm extends EventEmitter {
     this.addAgent('analyst-b', "Analyst B (Devil's Advocate)", 'analyst', { provider, temperature: 0.8 });
     this.addAgent('critic', 'Critic', 'critic', { provider, temperature: 0.6 });
     this.addAgent('synthesizer', 'Synthesizer', 'synthesizer', { provider, temperature: 0.4 });
+    this.addAgent('action-planner', 'Action Planner', 'action-planner', { provider, temperature: 0.2 });
   }
 
   _createProvider(providerName?: string): BaseProvider {
@@ -141,6 +147,60 @@ class Swarm extends EventEmitter {
     });
     context.final = synthesis;
 
+    let executionPlan: RunResult['executionPlan'] = undefined;
+    try {
+      const planner = this.agents.get('action-planner')!;
+      const planResult = await planner.think({
+        instruction: `You are the Action Planner. Given the user's request and the swarm's analysis, propose concrete actions the system can take.
+
+Available tools and their risk levels:
+- readFile (low): Read a file. Params: { path }
+- writeFile (medium): Write a file. Params: { path, content }
+- listDir (low): List directory. Params: { path }
+- searchFiles (low): Search files. Params: { path, pattern, maxResults }
+- execShell (high): Execute shell command. Params: { command, cwd }
+- httpRequest (medium): HTTP request. Params: { url, method, headers, body }
+- sendEmail (high): Send email. Params: { to, subject, body }
+- calendarEvent (medium): Create calendar event. Params: { title, start, end, description }
+- notify (low): Send notification. Params: { title, message, urgency }
+- crawlWeb (low): Crawl URLs. Params: { urls, query }
+- searchArxiv (low): Search papers. Params: { query, maxResults }
+- swarmQuery (low): Query swarm. Params: { question, maxRounds }
+- graphStore (low): Store in graph. Params: { type, label, content }
+- graphQuery (low): Query graph. Params: { query }
+- webhook (medium): Send webhook. Params: { url, payload, method }
+
+If the request requires actions, respond with a JSON code block:
+\`\`\`json
+{
+  "actions": [
+    { "tool": "toolName", "params": { ... }, "reason": "why this action" }
+  ],
+  "rationale": "overall plan rationale"
+}
+\`\`\`
+
+If the request is purely analytical with no actions needed, respond with:
+\`\`\`json
+{ "actions": [], "rationale": "No actions needed — this is an analysis-only request." }
+\`\`\``,
+        message: userMessage,
+        synthesis: synthesis.content,
+        analyses: context.analyses,
+        critiques: context.critiques
+      });
+
+      try {
+        const jsonMatch = planResult.content.match(/```json\s*([\s\S]*?)```/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[1]);
+          if (Array.isArray(parsed.actions)) {
+            executionPlan = { actions: parsed.actions, rationale: parsed.rationale || '' };
+          }
+        }
+      } catch { /* action plan parsing is best-effort */ }
+    } catch { /* action planner is optional */ }
+
     const elapsed = Date.now() - startTime;
     this.status = 'idle';
     this.emit('complete', { result: synthesis, rounds: this.rounds.length, elapsed });
@@ -149,7 +209,8 @@ class Swarm extends EventEmitter {
       rounds: this.rounds.length,
       elapsed,
       agents: [...this.agents.values()].map(a => ({ name: a.name, role: a.role, metrics: a.metrics })),
-      consensus: this.rounds[this.rounds.length - 1]?.consensus || 0
+      consensus: this.rounds[this.rounds.length - 1]?.consensus || 0,
+      executionPlan
     };
   }
 
@@ -238,8 +299,38 @@ class Swarm extends EventEmitter {
       yield { type: 'synthesis', agent: 'synthesizer', token };
     }
 
+    let executionPlan: StreamEvent['executionPlan'] = undefined;
+    try {
+      const planner = this.agents.get('action-planner')!;
+      const planResult = await planner.think({
+        instruction: `You are the Action Planner. Given the user's request and the swarm's analysis, propose concrete actions.
+
+Available tools: readFile, writeFile, listDir, searchFiles, execShell, httpRequest, sendEmail, calendarEvent, notify, crawlWeb, searchArxiv, swarmQuery, graphStore, graphQuery, webhook.
+
+If actions are needed, respond with a JSON code block:
+\`\`\`json
+{ "actions": [{ "tool": "name", "params": {}, "reason": "why" }], "rationale": "plan" }
+\`\`\`
+If no actions needed: { "actions": [], "rationale": "analysis only" }`,
+        message: userMessage,
+        synthesis: finalContent
+      });
+
+      try {
+        const jsonMatch = planResult.content.match(/```json\s*([\s\S]*?)```/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[1]);
+          if (Array.isArray(parsed.actions)) {
+            executionPlan = { actions: parsed.actions, rationale: parsed.rationale || '' };
+          }
+        }
+      } catch { /* action plan parsing is best-effort */ }
+
+      yield { type: 'action-plan', agent: 'action-planner', executionPlan };
+    } catch { /* action planner is optional */ }
+
     this.status = 'idle';
-    yield { type: 'complete', content: finalContent };
+    yield { type: 'complete', content: finalContent, executionPlan };
   }
 
   async _runRound(context: any, round: number): Promise<RoundResult> {

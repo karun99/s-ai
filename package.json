@@ -1,6 +1,6 @@
 {
   "name": "@saikarun/s-ai",
-  "version": "5.1.0",
+  "version": "6.0.0",
   "description": "Multi-agent swarm intelligence with neural mapping, research mapper (Paperscape-style arXiv visualization), Bhashini multilingual AI, crawl4ai, MCP, and bias-reduced consensus. 20+ AI providers.",
   "type": "module",
   "main": "./dist/src/index.js",
@@ -61,6 +61,18 @@
     "./bhashini/tools": {
       "types": "./dist/src/tools/bhashini-tool.d.ts",
       "import": "./dist/src/tools/bhashini-tool.js"
+    },
+    "./execution": {
+      "types": "./dist/src/execution/index.d.ts",
+      "import": "./dist/src/execution/index.js"
+    },
+    "./execution/types": {
+      "types": "./dist/src/execution/types.d.ts",
+      "import": "./dist/src/execution/types.js"
+    },
+    "./execution/registry": {
+      "types": "./dist/src/execution/registry.d.ts",
+      "import": "./dist/src/execution/registry.js"
     }
   },
   "bin": {

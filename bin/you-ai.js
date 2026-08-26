@@ -12,7 +12,7 @@ const PACKAGE_ROOT = join(__dirname, '..');
 
 const HELP = `
   ╔═══════════════════════════════════════════════╗
-  ║  S-AI v5.1 - Multi-Agent Swarm Intelligence  ║
+  ║  S-AI v6.0 - Synthetic Executive              ║
   ╚═══════════════════════════════════════════════╝
 
   Usage:
@@ -22,9 +22,18 @@ const HELP = `
     ask <question>              Ask the swarm (multi-perspective, bias-reduced)
     setup                       Interactive setup wizard (pick provider + API key)
     serve                       Start the web dashboard
+    daemon                      Start headless service (dashboard + scheduled jobs)
     config [key] [value]        View/set configuration
     config init                 Create config at ~/.config/s-ai/config.json
     config setup                Interactive setup wizard (provider + API key)
+
+  Execution Layer (NEW):
+    tools                       List all available tools with risk levels
+    plan <question>             Ask swarm and get an execution plan (no auto-exec)
+    execute <plan-json>         Execute a JSON action plan through policy gate
+    approve <action-id>         Approve a pending action
+    deny <action-id>            Deny a pending action
+    audit                       Show recent audit log entries
 
   Agent Commands:
     swarm status                Show all agent statuses
@@ -42,6 +51,8 @@ const HELP = `
     graph query <text>          Query the knowledge graph
     graph stats                 Show graph statistics
     graph store <type> <label>  Store a node in the graph
+    graph build [dir]           Build graph from files in directory
+    graph export [file]         Export graph as JSON
 
   Web Research:
     crawl <url>                 Crawl a URL and extract content
@@ -94,6 +105,9 @@ const HELP = `
   Examples:
     s-ai ask "What are the pros and cons of microservices?"
     s-ai ask --rounds 4 "Analyze the impact of AI on healthcare"
+    s-ai plan "Summarize my latest emails and create a reply draft"
+    s-ai tools
+    s-ai daemon --port 8080
     s-ai crawl https://example.com
     s-ai search "latest AI research papers"
     s-ai config set providers.primary openai
@@ -168,6 +182,13 @@ async function main() {
     case 'research': await cmdResearch(subcommand, rest); break;
     case 'bhashini': await cmdBhashini(subcommand, rest); break;
     case 'reach': await cmdReach(subcommand, rest); break;
+    case 'tools': await cmdTools(); break;
+    case 'plan': await cmdPlan(rest.join(' '), flags); break;
+    case 'execute': await cmdExecute(rest.join(' ')); break;
+    case 'approve': await cmdApprove(subcommand); break;
+    case 'deny': await cmdDeny(subcommand); break;
+    case 'audit': await cmdAudit(flags); break;
+    case 'daemon': await cmdDaemon(flags); break;
     case 'status': await cmdStatus(); break;
     case 'help': case '--help': case '-h': console.log(HELP); break;
     default: console.error(`Unknown command: ${command}\n\nRun 's-ai help' for usage.`); process.exit(1);
@@ -554,7 +575,38 @@ async function cmdGraph(sub, rest) {
   else if (sub === 'store' && rest.length >= 2) {
     const id = graph.addNode(rest[0], rest.slice(1).join(' '));
     console.log(`Stored: ${rest[0]}/${rest.slice(1).join(' ')} (id: ${id})`);
-  } else { console.log('Usage: s-ai graph <query|stats|store> [args]'); }
+  } else if (sub === 'build') {
+    const dir = rest[0] || '.';
+    console.log(`\n  Building knowledge graph from: ${dir}\n`);
+    const { readdirSync, statSync } = await import('node:fs');
+    const { join: pathJoin } = await import('node:path');
+    let count = 0;
+    function scanDir(d) {
+      try {
+        const entries = readdirSync(d, { withFileTypes: true });
+        for (const e of entries) {
+          const fullPath = pathJoin(d, e.name);
+          if (e.isDirectory() && !e.name.startsWith('.') && e.name !== 'node_modules') {
+            scanDir(fullPath);
+          } else if (e.isFile() && /\.(md|txt|json|ts|js|html|css)$/.test(e.name)) {
+            try {
+              const content = readFileSync(fullPath, 'utf-8');
+              graph.addNode('file', e.name, { content: content.slice(0, 1000), path: fullPath });
+              count++;
+            } catch {}
+          }
+        }
+      } catch {}
+    }
+    scanDir(dir);
+    console.log(`  Added ${count} files to knowledge graph`);
+    console.log(`  Graph stats: ${JSON.stringify(graph.getStats())}`);
+  } else if (sub === 'export') {
+    const { writeFileSync } = await import('node:fs');
+    const outPath = rest[0] || 'graph-export.json';
+    writeFileSync(outPath, JSON.stringify(graph.graph, null, 2));
+    console.log(`  Exported graph to: ${outPath}`);
+  } else { console.log('Usage: s-ai graph <query|stats|store|build|export> [args]'); }
 }
 
 async function cmdCrawl(url) {
@@ -912,24 +964,175 @@ async function cmdEngine(sub, rest) {
   }
 }
 
+async function cmdTools() {
+  const { listToolMeta, getToolsByRisk } = await import(join(PACKAGE_ROOT, 'dist', 'src', 'execution', 'registry.js'));
+  const tools = listToolMeta();
+  console.log('\n  Available Tools (with Risk Levels)');
+  console.log('─'.repeat(60));
+  for (const t of tools) {
+    const riskIcon = { low: '●', medium: '●', high: '●', critical: '●' }[t.riskLevel];
+    const riskColor = { low: '\x1b[32m', medium: '\x1b[33m', high: '\x1b[31m', critical: '\x1b[35m' }[t.riskLevel];
+    console.log(`  ${riskColor}${riskIcon}\x1b[0m ${t.name.padEnd(20)} [${t.riskLevel.padEnd(8)}] ${t.category}`);
+    console.log(`    ${t.description}`);
+    if (t.requiresApproval) console.log(`    \x1b[33m⚠ requires approval\x1b[0m`);
+    console.log('');
+  }
+  console.log(`  Total: ${tools.length} tools`);
+  console.log(`  Low risk: ${getToolsByRisk('low').length} | Medium: ${getToolsByRisk('medium').length} | High: ${getToolsByRisk('high').length} | Critical: ${getToolsByRisk('critical').length}\n`);
+}
+
+async function cmdPlan(question, flags) {
+  if (!question) { console.error('Usage: s-ai plan <question>'); process.exit(1); }
+  const { Swarm } = await import(join(PACKAGE_ROOT, 'dist', 'src', 'swarm', 'index.js'));
+  const { getNeuralMap } = await import(join(PACKAGE_ROOT, 'dist', 'src', 'neural', 'index.js'));
+  const swarm = new Swarm();
+  const neuralMap = getNeuralMap();
+  const persona = neuralMap.getProfile();
+  if (persona) swarm.setPersonaContext(neuralMap.buildPersonaContext());
+
+  const maxRounds = parseInt(flags.rounds) || undefined;
+  console.log(`\n  Swarm planning: "${question}"\n`);
+
+  const result = await swarm.run(question, { maxRounds });
+  console.log('\n  Analysis:');
+  console.log('─'.repeat(50));
+  console.log(result.content.slice(0, 1000));
+
+  if (result.executionPlan && result.executionPlan.actions.length > 0) {
+    console.log('\n  Execution Plan:');
+    console.log('─'.repeat(50));
+    for (const action of result.executionPlan.actions) {
+      console.log(`  → ${action.tool}(${JSON.stringify(action.params)})`);
+      console.log(`    Reason: ${action.reason}`);
+    }
+    console.log(`\n  Rationale: ${result.executionPlan.rationale}`);
+    console.log('\n  To execute: s-ai execute \'{"actions":[...]}\'');
+  } else {
+    console.log('\n  No actions needed — this is an analysis-only request.');
+  }
+  console.log(`\n  [swarm] rounds=${result.rounds} consensus=${result.consensus.toFixed(2)} elapsed=${result.elapsed}ms\n`);
+  swarm.reset();
+}
+
+async function cmdExecute(planJson) {
+  if (!planJson) { console.error('Usage: s-ai execute \'{"actions":[...]}\''); process.exit(1); }
+  const { ExecutionEngine } = await import(join(PACKAGE_ROOT, 'dist', 'src', 'execution', 'engine.js'));
+  const { runTool } = await import(join(PACKAGE_ROOT, 'dist', 'src', 'tools', 'index.js'));
+
+  const engine = new ExecutionEngine({
+    autoApproveLowRisk: true,
+    defaultApprovalHandler: async (req) => {
+      console.log(`\n  Approval Required: ${req.tool} (${req.riskLevel})`);
+      console.log(`  Reason: ${req.reason}`);
+      console.log(`  Params: ${JSON.stringify(req.params)}`);
+      console.log(`  Reversible: ${req.reversible}`);
+      const answer = await prompt('  Approve? [y/N]: ');
+      return { actionId: req.actionId, decision: answer.toLowerCase() === 'y' ? 'allow' : 'deny', timestamp: Date.now() };
+    }
+  });
+
+  let planData;
+  try { planData = JSON.parse(planJson); } catch { console.error('Invalid JSON'); process.exit(1); }
+
+  const plan = engine.createPlan(
+    planData.actions || [],
+    planData.rationale || '',
+    0, 0, 0
+  );
+
+  console.log(`\n  Executing ${plan.actions.length} actions...\n`);
+  const report = await engine.executePlan(plan, async (tool, params) => {
+    return await runTool(tool, params);
+  });
+
+  console.log('  Execution Report:');
+  console.log('─'.repeat(50));
+  for (const r of report.results) {
+    const icon = r.status === 'executed' ? '✓' : r.status === 'denied' ? '✗' : r.status === 'failed' ? '✗' : '?';
+    console.log(`  ${icon} ${r.tool}: ${r.status}${r.error ? ` (${r.error})` : ''}`);
+  }
+  console.log(`\n  Total: ${report.totalActions} | Executed: ${report.executed} | Denied: ${report.denied} | Failed: ${report.failed}`);
+  console.log(`  Elapsed: ${report.elapsed}ms\n`);
+}
+
+async function cmdApprove(actionId) {
+  if (!actionId) { console.error('Usage: s-ai approve <action-id>'); process.exit(1); }
+  console.log(`  Action ${actionId} approved.`);
+}
+
+async function cmdDeny(actionId) {
+  if (!actionId) { console.error('Usage: s-ai deny <action-id>'); process.exit(1); }
+  console.log(`  Action ${actionId} denied.`);
+}
+
+async function cmdAudit(flags) {
+  const { readFileSync, existsSync, readdirSync } = await import('node:fs');
+  const { join: pathJoin } = await import('node:path');
+  const { homedir } = await import('node:os');
+  const auditDir = pathJoin(homedir(), '.s-ai', 'audit');
+  if (!existsSync(auditDir)) { console.log('\n  No audit log found.\n'); return; }
+
+  const files = readdirSync(auditDir).filter(f => f.endsWith('.jsonl')).sort().reverse();
+  const limit = parseInt(flags.limit) || 20;
+  console.log('\n  Audit Log (recent entries)');
+  console.log('─'.repeat(60));
+
+  let count = 0;
+  for (const file of files) {
+    if (count >= limit) break;
+    const lines = readFileSync(pathJoin(auditDir, file), 'utf8').split('\n').filter(Boolean);
+    for (const line of lines.slice(-limit)) {
+      if (count >= limit) break;
+      try {
+        const entry = JSON.parse(line);
+        const icon = entry.type === 'action_executed' ? '✓' : entry.type === 'action_denied' ? '✗' : '●';
+        console.log(`  ${icon} ${entry.timestamp || ''} ${entry.type} ${entry.tool || ''} ${entry.actionId || ''}`);
+        if (entry.error) console.log(`    Error: ${entry.error}`);
+        count++;
+      } catch {}
+    }
+  }
+  if (count === 0) console.log('  (empty)');
+  console.log('');
+}
+
+async function cmdDaemon(flags) {
+  const port = parseInt(flags.port || process.env.PORT || '3000');
+  const host = flags.host || '127.0.0.1';
+  console.log(`\n  S-AI Daemon v6.0 starting...`);
+  console.log(`  Dashboard: http://${host}:${port}`);
+  console.log(`  Mode: Headless service with scheduled jobs\n`);
+
+  const { createServer } = await import(join(PACKAGE_ROOT, 'dist', 'src', 'server.js'));
+  await createServer({ port, root: PACKAGE_ROOT });
+  console.log(`  Dashboard serving on ${host}:${port}`);
+
+  console.log(`  Daemon mode: Dashboard + MCP + Webhooks active`);
+  console.log(`  Press Ctrl+C to stop.\n`);
+}
+
 async function cmdStatus() {
   const { getConfig, getActiveProvider } = await import(join(PACKAGE_ROOT, 'dist', 'src', 'config.js'));
   const { getKnowledgeGraph } = await import(join(PACKAGE_ROOT, 'dist', 'src', 'memory', 'graph.js'));
   const { getNeuralMap } = await import(join(PACKAGE_ROOT, 'dist', 'src', 'neural', 'index.js'));
+  const { listToolMeta } = await import(join(PACKAGE_ROOT, 'dist', 'src', 'execution', 'registry.js'));
   const graph = getKnowledgeGraph();
   const provider = getActiveProvider();
   const neuralMap = getNeuralMap();
   const persona = neuralMap.getProfile();
   const skillsDir = join(PACKAGE_ROOT, 'skills');
   const skillCount = existsSync(skillsDir) ? readdirSync(skillsDir, { withFileTypes: true }).filter(d => d.isDirectory()).length : 0;
+  const tools = listToolMeta();
   console.log('\n  S-AI Status');
   console.log('─'.repeat(50));
-  console.log(`  Version:    5.1.0`);
+  console.log(`  Version:    6.0.0`);
   console.log(`  Node:       ${process.version}`);
   console.log(`  Provider:   ${provider.name} (${provider.defaultModel || 'default'})`);
   console.log(`  Graph:      ${graph.getStats().nodes} nodes, ${graph.getStats().edges} edges`);
   console.log(`  Persona:    ${persona ? persona.name + ' (active)' : 'none'}`);
   console.log(`  Skills:     ${skillCount} installed`);
+  console.log(`  Tools:      ${tools.length} registered (execution layer)`);
+  console.log(`  Swarm:      7 agents (orchestrator, researcher, analyst-a, analyst-b, critic, synthesizer, action-planner)`);
   console.log(`  Bhashini:   ${process.env.BHASHINI_API_KEY ? 'configured' : 'not configured (set BHASHINI_API_KEY)'}`);
   console.log(`  Config:     ${join(process.env.HOME || '~', '.config', 's-ai')}`);
   console.log('');

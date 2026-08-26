@@ -19,6 +19,7 @@ describe('Swarm', () => {
     assert.ok(roles.includes('analyst'));
     assert.ok(roles.includes('critic'));
     assert.ok(roles.includes('synthesizer'));
+    assert.ok(roles.includes('action-planner'));
   });
 
   it('should add custom agents', async () => {
@@ -26,7 +27,7 @@ describe('Swarm', () => {
     const swarm = new Swarm();
     const agent = swarm.addAgent('custom', 'CustomAgent', 'custom_role');
     assert.ok(agent);
-    assert.equal(swarm.agents.size, 7);
+    assert.equal(swarm.agents.size, 8);
   });
 
   it('should get agent by id', async () => {
@@ -43,7 +44,7 @@ describe('Swarm', () => {
     const status = swarm.getStatus();
     assert.equal(status.status, 'idle');
     assert.ok(Array.isArray(status.agents));
-    assert.equal(status.agents.length, 6);
+    assert.equal(status.agents.length, 7);
   });
 
   it('should reset all agents', async () => {

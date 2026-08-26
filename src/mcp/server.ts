@@ -174,6 +174,84 @@ function createSwarmMcpServer(options: { swarmConfig?: Record<string, unknown> }
     return { content: [{ type: 'text' as const, text: JSON.stringify(list, null, 2) }] };
   });
 
+  mcp.tool('chat', 'Send a message and get an AI response',
+    { message: z.string().describe('The user message'), provider: z.string().optional().describe('Provider name'), model: z.string().optional().describe('Model name') },
+    async ({ message, provider, model }) => {
+      const { getActiveProvider, getProviderConfig } = await import('../config.js');
+      const activeProvider = provider || getActiveProvider().name;
+      const pcfg = getProviderConfig(activeProvider);
+      if (!pcfg?.apiKey) return { content: [{ type: 'text' as const, text: `No API key configured for ${activeProvider}` }] };
+      const resp = await fetch(`${pcfg.baseUrl || 'https://openrouter.ai/api/v1'}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${pcfg.apiKey}` },
+        body: JSON.stringify({ model: model || 'openai/gpt-3.5-turbo', messages: [{ role: 'user', content: message }], temperature: 0.8, max_tokens: 1024 })
+      });
+      const result = await resp.json() as Record<string, unknown>;
+      const choices = result.choices as Array<{ message?: { content?: string } }>;
+      const reply = choices?.[0]?.message?.content || 'No response';
+      graph.addConversation(message, reply);
+      return { content: [{ type: 'text' as const, text: reply }] };
+    }
+  );
+
+  mcp.tool('query_memory', 'Search conversation graph for relevant context',
+    { query: z.string().describe('Search query') },
+    async ({ query }) => {
+      const results = graph.query(query);
+      return { content: [{ type: 'text' as const, text: JSON.stringify(results, null, 2) }] };
+    }
+  );
+
+  mcp.tool('update_knowledge', 'Add or update knowledge in the graph',
+    { type: z.string().describe('Node type'), label: z.string().describe('Node label'), content: z.string().optional().describe('Node content') },
+    async ({ type, label, content }) => {
+      const id = graph.addNode(type, label, { content: content || '' });
+      return { content: [{ type: 'text' as const, text: `Updated knowledge: ${type}/${label} (id: ${id})` }] };
+    }
+  );
+
+  mcp.tool('get_context', 'Get relevant context for a topic from the knowledge graph',
+    { topic: z.string().describe('Topic to get context for') },
+    async ({ topic }) => {
+      const results = graph.query(topic);
+      const context = results.map(r => `• [${r.type}] ${r.label}: ${(r.content || '').slice(0, 200)}`).join('\n');
+      return { content: [{ type: 'text' as const, text: context || 'No context found for this topic.' }] };
+    }
+  );
+
+  mcp.resource('Conversation History', 'youai://history', { description: 'Full conversation history from the knowledge graph' }, async () => {
+    const history = graph.getHistory(100);
+    return { contents: [{ uri: 'youai://history', text: JSON.stringify(history, null, 2), mimeType: 'application/json' }] };
+  });
+
+  mcp.resource('Knowledge Base', 'youai://knowledge', { description: 'All knowledge nodes stored in the graph' }, async () => {
+    const nodes = graph.graph.nodes.filter(n => n.type !== 'user_message' && n.type !== 'ai_reply');
+    return { contents: [{ uri: 'youai://knowledge', text: JSON.stringify(nodes, null, 2), mimeType: 'application/json' }] };
+  });
+
+  mcp.resource('Knowledge Graph', 'youai://graph', { description: 'The full knowledge graph with nodes and edges' }, async () => {
+    return { contents: [{ uri: 'youai://graph', text: JSON.stringify(graph.graph, null, 2), mimeType: 'application/json' }] };
+  });
+
+  mcp.prompt('conversation_starter', 'Get suggested conversation topics based on the knowledge graph', {}, () => {
+    const keywords = graph.graph.indexes.byType['keyword'] || [];
+    const recent = graph.getHistory(5);
+    const topics = keywords.slice(0, 5).map(k => {
+      const node = graph.getNode(k);
+      return node?.label || 'unknown';
+    });
+    const suggestions = topics.length > 0
+      ? `Based on our history, you might want to discuss: ${topics.join(', ')}`
+      : 'What would you like to talk about?';
+    return { messages: [{ role: 'user', content: { type: 'text' as const, text: suggestions } }] };
+  });
+
+  mcp.prompt('reflect', 'Reflect on recent conversations and provide insights', {}, () => {
+    const history = graph.getHistory(10);
+    const topics = history.map(h => h.content.slice(0, 50)).join('\n- ');
+    return { messages: [{ role: 'user', content: { type: 'text' as const, text: `Reflect on these recent conversations:\n- ${topics}\n\nWhat patterns, insights, or follow-up questions do you notice?` } }] };
+  });
+
   return mcp;
 }
 

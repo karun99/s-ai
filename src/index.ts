@@ -16,3 +16,10 @@ export { getBhashiniTools } from './tools/bhashini-tool.js';
 export type { PersonaProfile, CognitiveTrait, CommunicationStyle, ContextNode as NeuralContextNode } from './neural/index.js';
 export type { BhashiniConfig, BhashiniASRResult, BhashiniTTSResult, BhashiniTranslateResult } from './providers/bhashini.js';
 export type { ArxivPaper, ArxivSearchResult } from './tools/arxiv.js';
+export { ExecutionEngine } from './execution/engine.js';
+export { getToolMeta, listToolMeta, getToolsByRisk, getToolsByCategory, getRiskForTool } from './execution/registry.js';
+export type {
+  ActionProposal, ExecutionPlan, ExecutionResult, ExecutionReport,
+  ApprovalRequest, ApprovalResponse, ApprovalHandler, ExecutionEngineConfig,
+  RiskLevel, ApprovalDecision, ActionStatus, ToolMetadata, ToolCategory, ToolParamDef
+} from './execution/types.js';

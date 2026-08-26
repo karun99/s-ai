@@ -1,7 +1,8 @@
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import type { Request, Response } from 'express';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -470,6 +471,107 @@ export async function createServer(options: { port?: number; root?: string } = {
       const graph = await getGraph();
       const stats = graph.getStats();
       res.json({ version: '5.1.0', uptime: process.uptime(), graph: stats, providers: { hasKey: !!(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY), bhashini: !!process.env.BHASHINI_API_KEY }, features: { researchMapper: true, bhashini: true }, port });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/chat', async (req: Request, res: Response) => {
+    try {
+      const { message, provider, model } = req.body;
+      if (!message) return res.status(400).json({ error: 'message is required' });
+      const { getActiveProviderInstance } = await import('./providers/index.js');
+      const { getActiveProvider, getProviderConfig } = await import('./config.js');
+      const activeProvider = provider || getActiveProvider().name;
+      const pcfg = getProviderConfig(activeProvider);
+      if (!pcfg?.apiKey) return res.status(400).json({ error: `No API key configured for ${activeProvider}` });
+      const resp = await fetch(`${pcfg.baseUrl || 'https://openrouter.ai/api/v1'}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${pcfg.apiKey}` },
+        body: JSON.stringify({ model: model || 'openai/gpt-3.5-turbo', messages: [{ role: 'user', content: message }], temperature: 0.8, max_tokens: 1024 })
+      });
+      const result = await resp.json() as Record<string, unknown>;
+      const choices = result.choices as Array<{ message?: { content?: string } }>;
+      const graph = await getGraph();
+      graph.addConversation(message, choices?.[0]?.message?.content || '');
+      res.json(result);
+    } catch (err: any) {
+      console.error('Chat error:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/history', async (req: Request, res: Response) => {
+    try {
+      const graph = await getGraph();
+      const { limit = '50' } = req.query;
+      const history = graph.getHistory(parseInt(limit as string));
+      res.json({ history });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/knowledge', async (req: Request, res: Response) => {
+    try {
+      const { type, label, content } = req.body;
+      if (!type || !label) return res.status(400).json({ error: 'type and label are required' });
+      const graph = await getGraph();
+      const id = graph.addNode(type, label, { content: content || '' });
+      res.json({ success: true, id });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/skills', async (req: Request, res: Response) => {
+    try {
+      const skillsDir = join(root, 'skills');
+      if (!existsSync(skillsDir)) return res.json({ skills: [] });
+      const dirs = readdirSync(skillsDir, { withFileTypes: true }).filter(d => d.isDirectory());
+      const skills = dirs.map(d => {
+        const manifestPath = join(skillsDir, d.name, 'skill.json');
+        if (existsSync(manifestPath)) {
+          try {
+            return JSON.parse(readFileSync(manifestPath, 'utf-8'));
+          } catch { return { name: d.name, version: 'unknown' }; }
+        }
+        return { name: d.name, version: 'unknown' };
+      });
+      res.json({ skills });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/skills/install', async (req: Request, res: Response) => {
+    try {
+      const { name } = req.body;
+      if (!name) return res.status(400).json({ error: 'skill name is required' });
+      const skillsDir = join(root, 'skills');
+      const skillDir = join(skillsDir, name);
+      if (existsSync(skillDir)) return res.json({ success: true, message: 'Skill already installed' });
+      try {
+        execSync(`npm pack ${name} --pack-destination /tmp`, { stdio: 'inherit' });
+        execSync(`tar -xzf /tmp/${name}-*.tgz -C /tmp`, { stdio: 'inherit' });
+        execSync(`mv /tmp/package ${skillDir}`, { stdio: 'inherit' });
+        res.json({ success: true, message: `Skill ${name} installed` });
+      } catch {
+        res.status(500).json({ error: `Failed to install skill ${name}` });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete('/api/skills/:name', async (req: Request, res: Response) => {
+    try {
+      const name = req.params.name as string;
+      const skillsDir = join(root, 'skills');
+      const skillDir = join(skillsDir, name);
+      if (!existsSync(skillDir)) return res.status(404).json({ error: 'Skill not found' });
+      rmSync(skillDir, { recursive: true, force: true });
+      res.json({ success: true, message: `Skill ${name} removed` });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
