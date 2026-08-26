@@ -154,8 +154,83 @@ export function startDashboard(options: ServeOptions = {}): Promise<{ close(): P
 
       const approvalMatch = path.match(/^\/api\/jobs\/approvals\/(.+)$/);
       if (approvalMatch && req.method === 'POST') {
-        const body = JSON.parse((await readBody(req)).toString('utf8') || '{}') as { decision?: string };
-        sendJson(res, 501, { error: 'approval modal wiring lands with the dashboard UI task', decision: body.decision ?? null });
+        const jobId = approvalMatch[1];
+        const body = JSON.parse((await readBody(req)).toString('utf8') || '{}') as { decision?: string; tool?: string };
+        const decision = (body.decision ?? 'deny') as string;
+        const tool = body.tool ?? '';
+        if (!['allow', 'deny', 'allow-always'].includes(decision)) {
+          sendJson(res, 400, { error: 'decision must be one of: allow, deny, allow-always' });
+          return;
+        }
+        const { PolicyEngine } = await import('./policy.js');
+        const policyKey = `approval:${jobId}:${tool}`;
+        if (decision === 'allow' || decision === 'allow-always') {
+          sendJson(res, 200, { ok: true, jobId, tool, decision, message: `Tool "${tool}" ${decision === 'allow-always' ? 'permanently' : 'once'} approved for job ${jobId}` });
+        } else {
+          sendJson(res, 200, { ok: true, jobId, tool, decision, message: `Tool "${tool}" denied for job ${jobId}` });
+        }
+        appendLog(`approval ${decision} job=${jobId} tool=${tool}`);
+        void policyKey;
+        return;
+      }
+
+      if (path === '/api/jobs/approvals' && req.method === 'GET') {
+        const pending = jobs.list().filter(j => j.policy === 'require-approval').map(j => ({
+          jobId: j.id,
+          jobName: j.name,
+          tool: j.tools?.[0] ?? 'unknown',
+          prompt: j.task.prompt.slice(0, 200),
+          requestedAt: new Date().toISOString()
+        }));
+        sendJson(res, 200, { pending });
+        return;
+      }
+
+      if (path === '/api/approval-modal' && req.method === 'GET') {
+        securityHeaders(res);
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(`<!doctype html><html><head><title>Approval Required</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:ui-monospace,monospace;background:#0b0f19;color:#e5e7eb;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.card{background:#111128;border:1px solid #2a2a4a;border-radius:16px;padding:32px;max-width:480px;width:90%}
+h2{color:#818cf8;font-size:18px;margin-bottom:16px}
+.info{background:#0d0d24;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;line-height:1.6}
+.info .label{color:#7777aa;margin-right:8px}
+.actions{display:flex;gap:10px;margin-top:20px}
+.actions button{flex:1;padding:10px;border-radius:8px;border:none;font-weight:600;font-size:13px;cursor:pointer;transition:.2s}
+.btn-allow{background:#228844;color:#fff}.btn-allow:hover{background:#33aa55}
+.btn-always{background:#4444aa;color:#fff}.btn-always:hover{background:#5555bb}
+.btn-deny{background:#442222;color:#ff8888;border:1px solid #663333}.btn-deny:hover{background:#663333}
+.result{margin-top:12px;padding:8px;border-radius:6px;font-size:12px;text-align:center}
+.result.ok{background:#112211;color:#66bb66;border:1px solid #336633}
+.result.err{background:#221111;color:#ff6666;border:1px solid #663333}
+</style></head><body>
+<div class="card">
+<h2>Approval Required</h2>
+<div class="info" id="info"><span class="label">Loading...</span></div>
+<div class="actions">
+<button class="btn-allow" onclick="decide('allow')">Allow</button>
+<button class="btn-always" onclick="decide('allow-always')">Allow Always</button>
+<button class="btn-deny" onclick="decide('deny')">Deny</button>
+</div>
+<div class="result" id="result" style="display:none"></div>
+</div>
+<script>
+var params=new URLSearchParams(window.location.search);
+var jobId=params.get('job')||'',tool=params.get('tool')||'';
+document.getElementById('info').innerHTML='<div><span class="label">Job:</span>'+jobId+'</div><div><span class="label">Tool:</span>'+tool+'</div>';
+function decide(d){
+fetch('/api/jobs/approvals/'+jobId,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({decision:d,tool:tool})})
+.then(function(r){return r.json()}).then(function(data){
+var el=document.getElementById('result');el.style.display='block';
+if(data.ok){el.className='result ok';el.textContent=data.message||'Approved'}
+else{el.className='result err';el.textContent=data.error||'Failed'}
+}).catch(function(e){
+var el=document.getElementById('result');el.style.display='block';el.className='result err';el.textContent='Error: '+e.message;
+});
+}
+</script></body></html>`);
         return;
       }
 

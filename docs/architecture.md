@@ -22,6 +22,8 @@
 │ ENGINE     @saikarun/s-ai: 6-agent swarm · neural mapping persona   │
 │            knowledge graph · study buddy · research mapper          │
 │            bhashini · MCP client/server · crawl · OKF crypto        │
+│            skills: ai-engine, ai-studio, research-mapper,           │
+│            study-buddy, mcp-builder, skill-creator, base            │
 ├─────────────────────────────────────────────────────────────────────┤
 │ ADAPTERS   providers (20+, provider:model routing) │ reach backends │
 │            jina · yt-dlp · gh · rss · arxiv (+cookie tiers later)   │
@@ -41,7 +43,7 @@ SOI communicates with the swarm exclusively through the signal hooks defined in 
 
 No Electron, no bundled browser, no resident agent. The dashboard is plain static files
 (`public/`) served over loopback HTTP by `src/server.ts` (existing), extended with
-`/api/soi/*`, `/api/jobs/*`, `/api/reach/*`.
+`/api/soi/*`, `/api/jobs/*`, `/api/reach/*`, `/api/jobs/approvals/*`, `/api/approval-modal`.
 
 ## 3. Module Map (new code under `suite/`)
 
@@ -75,6 +77,19 @@ Engine reuse contract: only public exports of `@saikarun/s-ai` are imported
 (providers, swarm, tools, mcp). If an export is missing, the harness adds a thin adapter in
 `suite/src/adapters/` rather than modifying engine source.
 
+### Skills (under `skills/`)
+
+```
+skills/
+├── ai-engine/         # Prompt-to-app builder with HTML generation
+├── ai-studio/         # Video generation via OpenRouter + NVIDIA AI
+├── research-mapper/   # arXiv search, citation graphs, paper analysis
+├── study-buddy/       # AI tutoring, quizzes, multi-mode mentoring
+├── mcp-builder/       # Resource-efficient MCP server creation from templates
+├── skill-creator/     # Modular skill composition and hot-plugging
+└── base/              # Shared init, explore, search, inspect utilities
+```
+
 ## 4. Key Flows
 
 ### 4.1 Ask (SOI passive)
@@ -90,11 +105,14 @@ swarm pipeline (Orchestrator→Researcher→AnalystA/B→Critic→Synthesizer)
 streamed answer + optional `soi:` header ─▶ console or dashboard
 ```
 
-### 4.2 Scheduled job
+### 4.2 Scheduled job with approval
 ```
 jobs.json due ─▶ runner.ts builds task+tools ─▶ policy gate
       │                                          │ require-approval?
-      │                                          └─ yes: prompt y/n (CLI) / modal (PWA)
+      │                                          ├─ yes: POST /api/jobs/approvals/:id
+      │                                          │        → approval modal (GET /api/approval-modal)
+      │                                          │        → dashboard UI polls /api/jobs/approvals
+      │                                          └─ no: execute directly
       ▼
 engine execution ─▶ artifacts/<job>/ ─▶ history ring ─▶ status/dashboard
 ```
@@ -123,6 +141,7 @@ checkpoint encrypted (AES-256-GCM) ─▶ ~/.openworker/soi/checkpoints/
 | Telemetry | none (v1) | NFR-8 |
 | SOI loading | dynamic import guarded by config presence | NFR-7 off-mode purity |
 | Failure posture | failover where possible (reach/providers); otherwise explicit error + prescription | no silent degradation |
+| Skills | modular skill registration via MCP tool/prompt/resource pattern | hot-pluggable, zero-overhead when unloaded |
 
 ## 6. Extension Points (post-v1)
 
@@ -130,3 +149,5 @@ checkpoint encrypted (AES-256-GCM) ─▶ ~/.openworker/soi/checkpoints/
 - Collabuild `build` mode registers as a worker task type (FR-C8).
 - APK wrapper reuses the same PWA bundle via Capacitor/Tauri Mobile.
 - Prompt-Code marketplace mounts as skill packs under the existing `skill` command.
+- Approval modal dashboard (POST /api/jobs/approvals/:id, GET /api/approval-modal) for policy-gated tool execution.
+- Study Buddy and Research Mapper serve as standalone dashboard pages via static file hosting.

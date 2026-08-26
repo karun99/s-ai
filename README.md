@@ -8,42 +8,206 @@
 
 > **Published:** [`@saikarun/s-ai`](https://www.npmjs.com/package/@saikarun/s-ai) | **License:** MIT | **Platform:** Node.js >= 18 | **Module:** ESM (TypeScript)
 
-A CLI-first multi-agent swarm system with **neural mapping (Digital Twin persona adaptation)**, **MCP Builder** (resource-efficient template-based MCP server creation), **Skill Creator** (customizable modular skill composition), **Research Mapper (Paperscape-style arXiv visualization)**, **Bhashini multilingual AI**, crawl4ai web scraping, MCP integration, knowledge graph, and bias-reduced consensus.
+A CLI-first multi-agent swarm system with **neural mapping (Digital Twin persona adaptation)**, **MCP Builder** (resource-efficient template-based MCP server creation), **Skill Creator** (customizable modular skill composition), **Research Mapper (Paperscape-style arXiv visualization)**, **Study Buddy (AI tutoring with gamified learning)**, **Bhashini multilingual AI**, crawl4ai web scraping, MCP integration, knowledge graph, and bias-reduced consensus.
 
 **No advanced hardware required** — runs on any device with a browser or Node.js. Zero inference cost with OpenRouter free models. Your data stays on your device.
 
-## Demo
+---
+
+## Supported Devices & Platforms
+
+| Platform | Architecture | Min RAM | Install Method | Status |
+|----------|-------------|---------|----------------|--------|
+| **Windows** | x64 | 256 MB | [Standalone .exe](#windows-exe) / [MSI Installer](#windows-msi) / npm | ✅ |
+| **Windows** | ARM64 | 256 MB | npm / standalone .exe | ✅ |
+| **macOS** | Intel (x64) | 256 MB | [Standalone binary](#macos) / npm | ✅ |
+| **macOS** | Apple Silicon (ARM64) | 256 MB | [Standalone binary](#macos) / npm | ✅ |
+| **Linux** | x64 | 256 MB | [Standalone binary](#linux) / npm / Docker | ✅ |
+| **Linux** | ARM64 | 256 MB | [Standalone binary](#linux-arm64) / npm | ✅ |
+| **Linux** | ARMv7 (RPi 3/4/5) | 512 MB | npm | ✅ |
+| **Android** | ARM64 | 512 MB | [APK](#android) / [Termux](#android-termux) / PWA | ✅ |
+| **Docker** | x64 / ARM64 | 512 MB | [Docker Compose](#docker) | ✅ |
+| **Raspberry Pi** | ARM64 / ARMv7 | 512 MB | npm / standalone binary | ✅ |
+| **Chrome OS** | x64 / ARM64 | 512 MB | Linux (Crostini) / PWA | ✅ |
+| **Any browser** | any | — | [PWA (home-screen install)](#pwa) | ✅ |
+
+### Minimum Requirements
+
+- **CPU:** Any 64-bit processor (ARM or x86). 32-bit systems not supported.
+- **RAM:** 256 MB free (CLI only). 512 MB recommended for dashboard.
+- **Disk:** 50 MB for core install. 200 MB with all build artifacts.
+- **Network:** Optional. Required only for AI provider calls. Fully offline with local Ollama models.
+- **OS:** Windows 10+, macOS 12+, Ubuntu 20.04+ / Debian 11+, Android 10+, any Linux with Node.js 18+.
+
+---
+
+## Installation Methods
+
+### 1. npm (All Platforms)
+
+The recommended installation method. Works on Windows, macOS, Linux, and Android (Termux).
 
 ```bash
-# Install & ask anything in 30 seconds
+# Global install (recommended)
+npm install -g @saikarun/s-ai@latest
+
+# Or run directly without installing
 npx @saikarun/s-ai ask "What are the pros and cons of microservices?"
-s-ai setup       # Interactive setup wizard
-s-ai serve       # Start web dashboard
+
+# First-time setup
+s-ai setup       # Interactive setup wizard — configure providers, API keys, preferences
+s-ai serve       # Start web dashboard at http://localhost:3000
 ```
 
-## Quick Start
+### 2. Windows — Standalone .exe
+
+No Node.js required. Download the single-file executable:
 
 ```bash
-npm install -g @saikarun/s-ai@latest    # Global install
-npx @saikarun/s-ai ask "What are the pros and cons of microservices?"  # Or run directly
-s-ai setup                               # Interactive setup wizard
-s-ai serve                               # Start web dashboard
+# Download from GitHub Releases
+# https://github.com/nsk/s-ai/releases/latest
+
+# Or build from source
+npm run build:exe
+# Output: build/dist/s-ai.exe
 ```
 
-## Run with Docker
+### 3. Windows — MSI Installer
+
+Full Windows Installer with Start Menu shortcuts, PATH setup, and uninstall support:
 
 ```bash
+# Build the MSI (requires WiX Toolset)
+npm run build:msi
+# Output: build/dist/s-ai-setup.msi
+```
+
+### 4. macOS
+
+Standalone binary for Intel and Apple Silicon:
+
+```bash
+# Build from source
+npm run build:exe
+# Output: build/dist/s-ai-macos (Intel) or s-ai-macos-arm64 (Apple Silicon)
+
+# Or use npm
+npm install -g @saikarun/s-ai@latest
+```
+
+### 5. Linux
+
+Standalone binary or package manager:
+
+```bash
+# Standalone binary
+npm run build:exe
+# Output: build/dist/s-ai-linux (x64) or s-ai-linux-arm64 (ARM64)
+
+# Or use npm
+npm install -g @saikarun/s-ai@latest
+
+# Make executable
+chmod +x build/dist/s-ai-linux
+./build/dist/s-ai-linux ask "Hello"
+```
+
+### 6. Linux ARM64 (Raspberry Pi, AWS Graviton)
+
+```bash
+npm install -g @saikarun/s-ai@latest
+# Or build standalone binary
+npm run build:exe
+# Output: build/dist/s-ai-linux-arm64
+```
+
+### 7. Docker
+
+```bash
+# Quick start
 cp .env.example .env      # add your API keys
 docker compose up -d --build
 # Dashboard: http://localhost:3000
+
+# Or build manually
+docker build -t s-ai .
+docker run -p 3000:3000 --env-file .env s-ai
 ```
 
-## Install from Source
+### 8. Android — APK
+
+Native Android app package:
+
+```bash
+# Build APK (requires Android SDK)
+npm run build:apk
+# Output: build/dist/s-ai.apk
+
+# Install on device
+adb install build/dist/s-ai.apk
+```
+
+### 9. Android — Termux
+
+Full CLI experience on Android via Termux terminal:
+
+```bash
+# Install Termux from F-Droid (not Play Store)
+pkg install nodejs
+npm install -g @saikarun/s-ai@latest
+s-ai setup
+s-ai serve
+```
+
+### 10. Android — PWA
+
+Install the dashboard as a home-screen app from any Android browser:
+
+1. Open `http://<your-device-ip>:3000` in Chrome
+2. Tap the **"Add to Home Screen"** banner
+3. The app installs as a standalone PWA
+
+### 11. PWA (Any Browser, Any OS)
+
+The dashboard is a Progressive Web App. Install it from any modern browser:
+
+1. Navigate to the dashboard URL
+2. Click the install icon in the address bar (or use browser menu)
+3. The app installs with offline support and native feel
+
+### 12. Install from Source
 
 ```bash
 git clone https://github.com/nsk/s-ai.git
 cd s-ai
 npm install            # postinstall builds dist/ automatically
+```
+
+### 13. Raspberry Pi (ARMv7 / ARM64)
+
+Optimized for Raspberry Pi 3, 4, and 5:
+
+```bash
+# On Raspberry Pi OS
+sudo apt install nodejs npm
+npm install -g @saikarun/s-ai@latest
+s-ai setup
+s-ai serve
+```
+
+### 14. Docker Compose (Production)
+
+```yaml
+# docker-compose.yml (included in repo)
+services:
+  s-ai:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file: .env
+    volumes:
+      - ~/.openworker:/root/.openworker
+    restart: unless-stopped
 ```
 
 ## What's in v5.1
@@ -61,8 +225,10 @@ npm install            # postinstall builds dist/ automatically
 | **MCP Builder** (resource-efficient templates) | **New in 5.1** |
 | **Skill Creator** (customizable modular skills) | **New in 5.1** |
 | **Research Mapper** (Paperscape-style arXiv citation graph) | **New in 5.1** |
+| **Study Buddy** (AI tutoring, quizzes, multi-mode mentoring) | **New in 5.1** |
 | **Bhashini Multilingual AI** (translation, TTS, ASR) | **New in 5.1** |
 | **AI Studio** (video generation) | **New** |
+| **Approval Modal** (policy-gated tool approval in dashboard) | **New in 5.1** |
 | **Multi-platform builds** (Windows, macOS, Linux, Android, Docker) | **New in 5.1** |
 
 ---
@@ -180,6 +346,82 @@ console.log(creator.getMemoryEstimate('chat-agent')); // 12288
 ```
 GET  /api/skill-creator/templates    — List all templates with memory estimates
 POST /api/skill-creator/build        — Build skill from template or prompt
+```
+
+---
+
+## Study Buddy
+
+AI-powered tutoring system with gamified learning, quiz generation, and multi-mode mentoring. The Study Buddy evolves as you learn — from "Dunce Twin" (Lv. 1) to "Royal Scholar" (Lv. 50).
+
+### Modes
+
+| Mode | Description |
+|------|-------------|
+| **Teach the Bot** | Teach AI by answering quiz questions. Earn XP, level up, and evolve your avatar. |
+| **Study Mentor** | Get help with homework, explanations, career guidance, resume review, references, or project pitches. |
+| **Summary** | Export your session as PDF, PPTX, or audio. |
+
+### Mentor Sub-Modes
+
+| Sub-Mode | Use Case |
+|----------|----------|
+| Homework | Step-by-step homework help |
+| Explain | Topic breakdown with analogies |
+| Career | Career path guidance |
+| Resume | Resume review and improvement |
+| References | APA/MLA/Chicago citation formatting |
+| Pitch | Project pitch deck generation |
+
+### MCP Tools
+
+```
+generate_quiz    — Generate a quiz question from a knowledge base
+check_answer     — Check if a user answer is correct
+get_evolution    — Get the current study buddy evolution stage
+format_references — Format academic references in APA/MLA/Chicago
+generate_pitch   — Generate a structured project pitch
+```
+
+### Dashboard
+
+Access the Study Buddy at `http://localhost:3000/study-buddy.html` after starting the dashboard.
+
+---
+
+## Research Mapper
+
+Paperscape-style arXiv research paper search, citation graph visualization, and swarm analysis. Search papers, build citation networks, and analyze research trends interactively.
+
+### Features
+
+- **Paper Search**: Query arXiv by keyword, author, or category
+- **Citation Graph**: Build force-directed citation networks between papers
+- **Category Filter**: Browse 15+ arXiv categories (cs.AI, physics, math, etc.)
+- **Swarm Analysis**: Use the 6-agent swarm to analyze paper contributions and methodology
+- **Interactive Dashboard**: Drag, zoom, and click to explore the research landscape
+
+### MCP Tools
+
+```
+search_papers     — Search arXiv for papers by query, category, or author
+build_graph       — Build a citation graph from arXiv paper IDs
+get_paper         — Fetch detailed paper information by arXiv ID
+list_categories   — List popular arXiv research categories
+```
+
+### Dashboard
+
+Access the Research Mapper at `http://localhost:3000/research-mapper.html` after starting the dashboard.
+
+### Programmatic Usage
+
+```typescript
+import { searchArxiv, buildCitationGraph } from '@saikarun/s-ai/arxiv';
+
+const result = await searchArxiv('cat:cs.AI AND transformer', 0, 25);
+const graph = buildCitationGraph(result.papers);
+console.log(`${graph.nodes.length} papers, ${graph.edges.length} citation links`);
 ```
 
 ---
