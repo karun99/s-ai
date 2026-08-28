@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSync } from 'node:fs';
 import { join, dirname, extname, resolve, relative } from 'node:path';
-import { homedir } from 'node:os';
+import { execFile } from 'node:child_process';
+import { homedir, tmpdir } from 'node:os';
 
 interface ToolParameter {
   type: string;
@@ -15,7 +16,7 @@ interface ToolDefinition {
   execute: (params: Record<string, unknown>) => Promise<Record<string, unknown>>;
 }
 
-const SAFE_ROOTS = [homedir(), process.cwd()];
+const SAFE_ROOTS = [homedir(), tmpdir(), process.cwd()];
 
 function isPathSafe(targetPath: string): boolean {
   const resolved = resolve(targetPath);
@@ -92,6 +93,35 @@ const TOOLS: Record<string, ToolDefinition> = {
       }
       walk(path as string);
       return { results, count: results.length };
+    }
+  },
+
+  execShell: {
+    name: 'execShell',
+    description: 'Execute a shell command and return its output',
+    parameters: {
+      command: { type: 'string', description: 'Shell command to execute' },
+      cwd: { type: 'string', description: 'Working directory', default: process.cwd() },
+      timeout: { type: 'number', description: 'Timeout in ms', default: 30000 }
+    },
+    async execute({ command, cwd = process.cwd(), timeout = 30000 }) {
+      if (typeof command !== 'string' || !command.trim()) return { error: 'command is required' };
+      const workDir = (cwd as string) || process.cwd();
+      if (!isPathSafe(workDir)) return { error: 'Access denied: cwd outside allowed directories' };
+      return await new Promise<Record<string, unknown>>((resolvePromise) => {
+        execFile(
+          '/bin/sh',
+          ['-lc', command as string],
+          { cwd: workDir, timeout: timeout as number, maxBuffer: 10 * 1024 * 1024 },
+          (err, stdout, stderr) => {
+            if (err) {
+              resolvePromise({ error: (err as Error).message, stdout: String(stdout), stderr: String(stderr), exitCode: (err as { code?: number }).code ?? 1 });
+            } else {
+              resolvePromise({ stdout: String(stdout), stderr: String(stderr), exitCode: 0 });
+            }
+          }
+        );
+      });
     }
   }
 };

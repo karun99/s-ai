@@ -5,6 +5,10 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-ec4899)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-2c3e50)](package.json)
 [![Build](https://img.shields.io/badge/build-passing-22c55e)](build/)
+[![CI](https://github.com/karun99/s-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/karun99/s-ai/actions/workflows/ci.yml)
+[![Docker](https://github.com/karun99/s-ai/actions/workflows/docker.yml/badge.svg)](https://github.com/karun99/s-ai/actions/workflows/docker.yml)
+[![Pages](https://github.com/karun99/s-ai/actions/workflows/pages.yml/badge.svg)](https://github.com/karun99/s-ai/actions/workflows/pages.yml)
+[![Release](https://github.com/karun99/s-ai/actions/workflows/release.yml/badge.svg)](https://github.com/karun99/s-ai/actions/workflows/release.yml)
 
 > **Published:** [`@saikarun/s-ai`](https://www.npmjs.com/package/@saikarun/s-ai) | **License:** MIT | **Platform:** Node.js >= 18 | **Module:** ESM (TypeScript)
 
@@ -460,7 +464,26 @@ bash build/scripts/build-docker.sh # Just Docker
 
 ### CI/CD
 
-GitHub Actions (`.github/workflows/build.yml`) automatically builds all platforms on push to `main` or version tags. Releases are created with all artifacts attached.
+GitHub Actions validates every push/PR to `main` and deploys on merge. Workflows live in [`.github/workflows/`](.github/workflows):
+
+| Workflow | Trigger | What it does |
+|----------|---------|--------------|
+| [`ci.yml`](.github/workflows/ci.yml) | push & PR to `main` | Lint, type-check (`validate`), build, and run the full test suite on Node 18/20/22 |
+| [`pages.yml`](.github/workflows/pages.yml) | push to `main` / manual | Deploys the web dashboard (`public/`) to **GitHub Pages** |
+| [`docker.yml`](.github/workflows/docker.yml) | push to `main`, `v*` tags / manual | Builds & pushes the Docker image to **GHCR** (`ghcr.io/karun99/s-ai`) |
+| [`release.yml`](.github/workflows/release.yml) | `v*` tags / manual | Builds native executables and creates a GitHub Release with artifacts |
+
+### Local Validation
+
+Run the same checks CI runs locally to confirm everything is green:
+
+```bash
+npm ci --ignore-scripts   # install once
+npm run lint              # eslint (bin/)
+npm run validate          # tsc --noEmit type check
+npm run build             # compile TypeScript -> dist/
+npm run test              # node test runner (125+ tests)
+```
 
 ---
 

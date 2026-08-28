@@ -76,7 +76,7 @@ build/dist/
 
 ## CI/CD
 
-GitHub Actions workflow (`.github/workflows/build.yml`) automatically builds all platforms on push to `main` or when a version tag is pushed.
+GitHub Actions workflows in [`.github/workflows/`](../.github/workflows) build, test, and validate on every push/PR to `main`. Platform artifacts (executables) are produced by the `release.yml` workflow when a version tag (`v*`) is pushed, and the Docker image is built and pushed to GHCR by `docker.yml`.
 
 ## Notes
 

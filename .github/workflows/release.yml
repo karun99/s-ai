@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build executables & create release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build TypeScript -> dist
+        run: npm run build
+
+      - name: Install pkg
+        run: npx --yes pkg@latest --version
+
+      - name: Build native executables
+        run: |
+          mkdir -p build/dist
+          npx pkg . \
+            --targets node18-linux-x64 \
+            --output build/dist/s-ai-linux-x64 \
+            --config build/pkg.config.json \
+            --compress Brotli
+          chmod +x build/dist/s-ai-linux-x64
+
+      - name: Compute version
+        id: version
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          if [ -z "$VER" ]; then VER=$(node -p "require('./package.json').version"); fi
+          echo "version=${VER}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: S-AI v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            build/dist/s-ai-linux-x64

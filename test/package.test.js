@@ -10,8 +10,8 @@ const ROOT = join(__dirname, '..');
 describe('package.json', () => {
   const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
 
-  it('should have name "s-ai"', () => {
-    assert.equal(pkg.name, 's-ai');
+  it('should have name "@saikarun/s-ai"', () => {
+    assert.equal(pkg.name, '@saikarun/s-ai');
   });
 
   it('should have version', () => {
