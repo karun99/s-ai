@@ -24,24 +24,24 @@ A CLI-first multi-agent swarm system with **execution layer** (policy-gated tool
 
 | Platform | Architecture | Min RAM | Install Method | Status |
 |----------|-------------|---------|----------------|--------|
-| **Windows** | x64 | 256 MB | [Standalone .exe](#windows-exe) / [MSI Installer](#windows-msi) / npm | ✅ |
-| **Windows** | ARM64 | 256 MB | npm / standalone .exe | ✅ |
-| **macOS** | Intel (x64) | 256 MB | [Standalone binary](#macos) / npm | ✅ |
-| **macOS** | Apple Silicon (ARM64) | 256 MB | [Standalone binary](#macos) / npm | ✅ |
-| **Linux** | x64 | 256 MB | [Standalone binary](#linux) / npm / Docker | ✅ |
-| **Linux** | ARM64 | 256 MB | [Standalone binary](#linux-arm64) / npm | ✅ |
-| **Linux** | ARMv7 (RPi 3/4/5) | 512 MB | npm | ✅ |
-| **Android** | ARM64 | 512 MB | [APK](#android) / [Termux](#android-termux) / PWA | ✅ |
-| **Docker** | x64 / ARM64 | 512 MB | [Docker Compose](#docker) | ✅ |
-| **Raspberry Pi** | ARM64 / ARMv7 | 512 MB | npm / standalone binary | ✅ |
-| **Chrome OS** | x64 / ARM64 | 512 MB | Linux (Crostini) / PWA | ✅ |
+| **Windows** | x64 | 2 GB | [Standalone .exe](#windows-exe) / [MSI Installer](#windows-msi) / npm | ✅ |
+| **Windows** | ARM64 | 2 GB | npm / standalone .exe | ✅ |
+| **macOS** | Intel (x64) | 2 GB | [Standalone binary](#macos) / npm | ✅ |
+| **macOS** | Apple Silicon (ARM64) | 2 GB | [Standalone binary](#macos) / npm | ✅ |
+| **Linux** | x64 | 2 GB | [Standalone binary](#linux) / npm / Docker | ✅ |
+| **Linux** | ARM64 | 2 GB | [Standalone binary](#linux-arm64) / npm | ✅ |
+| **Linux** | ARMv7 (RPi 3/4/5) | 2 GB | npm | ✅ |
+| **Android** | ARM64 | 2 GB | [APK](#android) / [Termux](#android-termux) / PWA | ✅ |
+| **Docker** | x64 / ARM64 | 2 GB | [Docker Compose](#docker) | ✅ |
+| **Raspberry Pi** | ARM64 / ARMv7 | 2 GB | npm / standalone binary | ✅ |
+| **Chrome OS** | x64 / ARM64 | 2 GB | Linux (Crostini) / PWA | ✅ |
 | **Any browser** | any | — | [PWA (home-screen install)](#pwa) | ✅ |
 
 ### Minimum Requirements
 
 - **CPU:** Any 64-bit processor (ARM or x86). 32-bit systems not supported.
-- **RAM:** 256 MB free (CLI only). 512 MB recommended for dashboard.
-- **Disk:** 50 MB for core install. 200 MB with all build artifacts.
+- **RAM:** 2 GB minimum (CLI only). 4–8 GB recommended for the web dashboard, multiple agent swarm runs, and locally-hosted models (Ollama/Llama). Large reasoning tasks or running local LLMs benefit from 8 GB+.
+- **Disk:** 200 MB minimum for the core install (Node.js + compiled app + dashboard). ~500 MB–1.5 GB with native executables, Docker image, and additional build artifacts.
 - **Network:** Optional. Required only for AI provider calls. Fully offline with local Ollama models.
 - **OS:** Windows 10+, macOS 12+, Ubuntu 20.04+ / Debian 11+, Android 10+, any Linux with Node.js 18+.
 
