@@ -17,6 +17,8 @@ export type { PersonaProfile, CognitiveTrait, CommunicationStyle, ContextNode as
 export type { BhashiniConfig, BhashiniASRResult, BhashiniTTSResult, BhashiniTranslateResult } from './providers/bhashini.js';
 export type { ArxivPaper, ArxivSearchResult } from './tools/arxiv.js';
 export { ExecutionEngine } from './execution/engine.js';
+export { expandAbbreviation } from './tools/zencode.js';
+export type { ZenCodeResult } from './tools/zencode.js';
 export { getToolMeta, listToolMeta, getToolsByRisk, getToolsByCategory, getRiskForTool } from './execution/registry.js';
 export type {
   ActionProposal, ExecutionPlan, ExecutionResult, ExecutionReport,

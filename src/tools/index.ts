@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSy
 import { join, dirname, extname, resolve, relative } from 'node:path';
 import { execFile } from 'node:child_process';
 import { homedir, tmpdir } from 'node:os';
+import { expandAbbreviation } from './zencode.js';
 
 interface ToolParameter {
   type: string;
@@ -122,6 +123,17 @@ const TOOLS: Record<string, ToolDefinition> = {
           }
         );
       });
+    }
+  },
+
+  zencode: {
+    name: 'zencode',
+    description: 'Expand a Zen Coding (Emmet-style) HTML abbreviation into markup',
+    parameters: { abbreviation: { type: 'string', description: 'Zen Coding abbreviation, e.g. "div#page>ul>li.item$*3>a"' } },
+    async execute({ abbreviation }) {
+      const html = expandAbbreviation(abbreviation as string);
+      if (html === null) return { error: 'Invalid abbreviation or ZenCode engine unavailable' };
+      return { html, abbreviation: abbreviation as string };
     }
   }
 };

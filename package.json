@@ -146,6 +146,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
     "express": "^4.21.0",
+    "zen-coding": "^0.0.5",
     "zod": "^3.24.0"
   },
   "devDependencies": {
@@ -168,10 +169,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nsk/s-ai.git"
+    "url": "git+https://github.com/karun99/s-ai.git"
   },
   "bugs": {
-    "url": "https://github.com/nsk/s-ai/issues"
+    "url": "https://github.com/karun99/s-ai/issues"
   },
-  "homepage": "https://github.com/nsk/s-ai#readme"
+  "homepage": "https://github.com/karun99/s-ai#readme"
 }

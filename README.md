@@ -71,7 +71,7 @@ No Node.js required. Download the single-file executable:
 
 ```bash
 # Download from GitHub Releases
-# https://github.com/nsk/s-ai/releases/latest
+# https://github.com/karun99/s-ai/releases/latest
 
 # Or build from source
 npm run build:exe
@@ -184,7 +184,7 @@ The dashboard is a Progressive Web App. Install it from any modern browser:
 ### 12. Install from Source
 
 ```bash
-git clone https://github.com/nsk/s-ai.git
+git clone https://github.com/karun99/s-ai.git
 cd s-ai
 npm install            # postinstall builds dist/ automatically
 ```

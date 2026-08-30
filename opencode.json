@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "./opencode-research-mode"
+  ],
+  "agent": {
+    "s-ai": {
+      "description": "S-AI subagent — multi-agent swarm intelligence, research, execution, and Zen Code HTML generation.",
+      "mode": "subagent"
+    }
+  },
+  "skills": {
+    "paths": [".opencode/skills"]
+  }
+}

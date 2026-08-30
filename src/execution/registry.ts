@@ -164,6 +164,18 @@ registerTool({
 });
 
 registerTool({
+  name: 'zencode',
+  description: 'Expand a Zen Coding (Emmet-style) HTML abbreviation into markup',
+  riskLevel: 'low',
+  category: 'data',
+  reversible: false,
+  requiresApproval: false,
+  params: {
+    abbreviation: { type: 'string', description: 'Zen Coding abbreviation, e.g. "div#page>ul>li.item$*3>a"', required: true }
+  }
+});
+
+registerTool({
   name: 'crawlWeb',
   description: 'Crawl web pages and extract content',
   riskLevel: 'low',

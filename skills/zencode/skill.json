@@ -1,0 +1,28 @@
+{
+  "name": "zencode",
+  "version": "1.0.0",
+  "description": "ZenCode — expand compact Zen Coding / Emmet-style abbreviations into full HTML markup (e.g. div#page>ul>li.item$*3>a)",
+  "author": "nsk",
+  "main": "index.js",
+  "icon": "⚡",
+  "category": "builder",
+  "tools": [
+    {
+      "name": "zencode_expand",
+      "description": "Expand a Zen Coding (Emmet-style) HTML abbreviation into markup"
+    }
+  ],
+  "prompts": [
+    {
+      "name": "zencode_layout",
+      "description": "Design an HTML layout using Zen Coding abbreviations"
+    }
+  ],
+  "resources": [
+    {
+      "uri": "s-ai://zencode/cheatsheet",
+      "name": "Zen Code Cheat Sheet",
+      "description": "Core abbreviations: > child, + sibling, * multiply, # id, . class, [attr], $ numbering"
+    }
+  ]
+}
