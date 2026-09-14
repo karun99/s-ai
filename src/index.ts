@@ -17,6 +17,15 @@ export type { PersonaProfile, CognitiveTrait, CommunicationStyle, ContextNode as
 export type { BhashiniConfig, BhashiniASRResult, BhashiniTTSResult, BhashiniTranslateResult } from './providers/bhashini.js';
 export type { ArxivPaper, ArxivSearchResult } from './tools/arxiv.js';
 export { ExecutionEngine } from './execution/engine.js';
+export {
+  createSpikeTensor, ControlLoop, DEFAULT_MAZE,
+  adversarialStressTest, ADVERSARIAL_SUITE, validateCognitiveRobotics,
+} from './cognitive/index.js';
+export type {
+  SpikeTensor, SpikeTensorConfig, SpikeStats,
+  MazeField, MazeResult, CoherenceReport, AdversarialTestCase,
+  CognitiveValidationConfig, CognitiveValidationResult,
+} from './cognitive/index.js';
 export { expandAbbreviation } from './tools/zencode.js';
 export type { ZenCodeResult } from './tools/zencode.js';
 export { getToolMeta, listToolMeta, getToolsByRisk, getToolsByCategory, getRiskForTool } from './execution/registry.js';
