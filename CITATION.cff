@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "S-AI"
+abstract: "Self-hosted Artificial Mind: a multi-agent swarm with bias-reduced consensus, Digital Twin persona adaptation, simulated-organoid intelligence, policy-gated execution, and a native OpenWorker harness."
+authors:
+  - family-names: Nandipati
+    given-names: Sai Karun
+    orcid: https://orcid.org/0009-0007-9218-9750
+    affiliation: "Department of Data Science and Artificial Intelligence, PB Siddhartha College of Arts and Science"
+keywords:
+  - multi-agent systems
+  - swarm intelligence
+  - agentic AI
+  - digital twin
+  - execution safety
+license: MIT
+date-released: "2026-09-25"
+version: "6.1.0"
+repository-code: "https://github.com/karun99/s-ai"

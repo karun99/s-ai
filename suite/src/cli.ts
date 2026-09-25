@@ -1,7 +1,7 @@
 /**
  * openworker CLI (FR-C2) — arg parsing -> dispatch into engine exports.
  *
- * Command surface parity with s-ai v5.1 (ask, serve, swarm, persona, graph,
+ * Command surface parity with s-ai v6.1 (ask, serve, swarm, persona, graph,
  * crawl, search, mcp, provider, skill, engine, research, bhashini, study) is
  * achieved by delegating those to the engine binary found via the adapter;
  * suite-native commands are handled locally: reach, jobs, soi, import,

@@ -1,5 +1,19 @@
-import { describe, it } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir, tmpdir } from 'node:os';
+
+const SANDBOX_TEST_DIR = join(homedir(), '.s-ai', 'data', 'test-listdir');
+
+before(() => {
+  mkdirSync(SANDBOX_TEST_DIR, { recursive: true });
+  writeFileSync(join(SANDBOX_TEST_DIR, 'entry-1.txt'), 'content');
+});
+
+after(() => {
+  try { rmSync(SANDBOX_TEST_DIR, { recursive: true, force: true }); } catch {}
+});
 
 describe('CrawlEngine', () => {
   it('should create a crawl engine', async () => {
@@ -67,13 +81,12 @@ describe('File Tools', () => {
     const { listTools } = await import('../dist/src/tools/index.js');
     const tools = listTools();
     assert.ok(Array.isArray(tools));
-    assert.ok(tools.length >= 5);
+    assert.ok(tools.length >= 4);
     const names = tools.map(t => t.name);
     assert.ok(names.includes('readFile'));
     assert.ok(names.includes('writeFile'));
     assert.ok(names.includes('listDir'));
     assert.ok(names.includes('searchFiles'));
-    assert.ok(names.includes('execShell'));
   });
 
   it('should get a tool by name', async () => {
@@ -103,9 +116,10 @@ describe('File Tools', () => {
 
   it('should list directory entries', async () => {
     const { runTool } = await import('../dist/src/tools/index.js');
-    const result = await runTool('listDir', { path: '/tmp' });
+    const result = await runTool('listDir', { path: SANDBOX_TEST_DIR });
     assert.ok(result.entries);
     assert.ok(result.count > 0);
+    assert.strictEqual(result.count, 1);
   });
 
   it('should return error for nonexistent directory', async () => {

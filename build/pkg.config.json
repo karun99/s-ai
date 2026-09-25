@@ -1,6 +1,6 @@
 {
   "name": "s-ai",
-  "version": "5.1.0",
+  "version": "6.1.0",
   "description": "S-AI Multi-Agent Swarm Intelligence",
   "bin": "bin/you-ai.js",
   "output": "build/dist",

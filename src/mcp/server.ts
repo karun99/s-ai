@@ -8,7 +8,7 @@ import { getConfig } from '../config.js';
 import { getNeuralMap } from '../neural/index.js';
 
 function createSwarmMcpServer(options: { swarmConfig?: Record<string, unknown> } = {}): McpServer {
-  const mcp = new McpServer({ name: 'S-AI Swarm', version: '5.0.0' });
+  const mcp = new McpServer({ name: 'S-AI Swarm', version: '6.1.0' });
   const graph = getKnowledgeGraph();
   const swarm = new Swarm(options.swarmConfig);
   const neuralMap = getNeuralMap();

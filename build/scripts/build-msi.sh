@@ -46,7 +46,7 @@ echo "[2/3] Compiling WiX source..."
 if command -v wix &>/dev/null; then
   wix build "$WXS" \
     -o "$OUT/s-ai-setup.msi" \
-    -d "VERSION=5.1.0" \
+    -d "VERSION=6.1.0" \
     -d "EXE=$OUT/s-ai.exe"
 elif command -v candle &>/dev/null; then
   candle -nologo -out "$OUT/s-ai-setup.wixobj" "$WXS"

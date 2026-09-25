@@ -1,8 +1,6 @@
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSync } from 'node:fs';
-import { join, dirname, extname, resolve, relative } from 'node:path';
-import { execFile } from 'node:child_process';
-import { homedir, tmpdir } from 'node:os';
-import { expandAbbreviation } from './zencode.js';
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'node:fs';
+import { join, extname } from 'node:path';
+import { isPathInSandbox, WORKSPACE_ROOT, SAFE_ROOTS, DENY_PATTERNS } from '../security/sandbox.js';
 
 interface ToolParameter {
   type: string;
@@ -17,20 +15,15 @@ interface ToolDefinition {
   execute: (params: Record<string, unknown>) => Promise<Record<string, unknown>>;
 }
 
-const SAFE_ROOTS = [homedir(), tmpdir(), process.cwd()];
-
-function isPathSafe(targetPath: string): boolean {
-  const resolved = resolve(targetPath);
-  return SAFE_ROOTS.some(root => resolved === root || resolved.startsWith(root + '/'));
-}
-
 const TOOLS: Record<string, ToolDefinition> = {
   readFile: {
     name: 'readFile',
     description: 'Read a file from the filesystem',
     parameters: { path: { type: 'string', description: 'File path to read' } },
     async execute({ path }) {
-      if (!isPathSafe(path as string)) return { error: 'Access denied: path outside allowed directories' };
+      if (!path) return { error: 'path is required' };
+      const check = isPathInSandbox(path as string);
+      if (!check.safe) return { error: `Access denied: ${check.reason}` };
       if (!existsSync(path as string)) return { error: `File not found: ${path}` };
       const content = readFileSync(path as string, 'utf8');
       return { content, path, size: content.length };
@@ -45,8 +38,11 @@ const TOOLS: Record<string, ToolDefinition> = {
       content: { type: 'string', description: 'Content to write' }
     },
     async execute({ path, content }) {
-      if (!isPathSafe(path as string)) return { error: 'Access denied: path outside allowed directories' };
-      const dir = dirname(path as string);
+      if (!path) return { error: 'path is required' };
+      if (!content && content !== '') return { error: 'content is required' };
+      const check = isPathInSandbox(path as string);
+      if (!check.safe) return { error: `Access denied: ${check.reason}` };
+      const dir = join(path as string, '..');
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
       writeFileSync(path as string, content as string);
       return { success: true, path, bytesWritten: (content as string).length };
@@ -58,7 +54,9 @@ const TOOLS: Record<string, ToolDefinition> = {
     description: 'List files and directories in a path',
     parameters: { path: { type: 'string', description: 'Directory path' } },
     async execute({ path }) {
-      if (!isPathSafe(path as string)) return { error: 'Access denied: path outside allowed directories' };
+      if (!path) return { error: 'path is required' };
+      const check = isPathInSandbox(path as string);
+      if (!check.safe) return { error: `Access denied: ${check.reason}` };
       if (!existsSync(path as string)) return { error: `Directory not found: ${path}` };
       const entries = readdirSync(path as string, { withFileTypes: true }).map(e => ({
         name: e.name, type: e.isDirectory() ? 'directory' : 'file',
@@ -77,7 +75,10 @@ const TOOLS: Record<string, ToolDefinition> = {
       maxResults: { type: 'number', description: 'Max results', default: 20 }
     },
     async execute({ path, pattern, maxResults = 20 }) {
-      if (!isPathSafe(path as string)) return { error: 'Access denied: path outside allowed directories' };
+      if (!path) return { error: 'path is required' };
+      if (!pattern) return { error: 'pattern is required' };
+      const check = isPathInSandbox(path as string);
+      if (!check.safe) return { error: `Access denied: ${check.reason}` };
       if (!existsSync(path as string)) return { error: `Directory not found: ${path}` };
       const results: string[] = [];
       function walk(dir: string): void {
@@ -95,46 +96,6 @@ const TOOLS: Record<string, ToolDefinition> = {
       walk(path as string);
       return { results, count: results.length };
     }
-  },
-
-  execShell: {
-    name: 'execShell',
-    description: 'Execute a shell command and return its output',
-    parameters: {
-      command: { type: 'string', description: 'Shell command to execute' },
-      cwd: { type: 'string', description: 'Working directory', default: process.cwd() },
-      timeout: { type: 'number', description: 'Timeout in ms', default: 30000 }
-    },
-    async execute({ command, cwd = process.cwd(), timeout = 30000 }) {
-      if (typeof command !== 'string' || !command.trim()) return { error: 'command is required' };
-      const workDir = (cwd as string) || process.cwd();
-      if (!isPathSafe(workDir)) return { error: 'Access denied: cwd outside allowed directories' };
-      return await new Promise<Record<string, unknown>>((resolvePromise) => {
-        execFile(
-          '/bin/sh',
-          ['-lc', command as string],
-          { cwd: workDir, timeout: timeout as number, maxBuffer: 10 * 1024 * 1024 },
-          (err, stdout, stderr) => {
-            if (err) {
-              resolvePromise({ error: (err as Error).message, stdout: String(stdout), stderr: String(stderr), exitCode: (err as { code?: number }).code ?? 1 });
-            } else {
-              resolvePromise({ stdout: String(stdout), stderr: String(stderr), exitCode: 0 });
-            }
-          }
-        );
-      });
-    }
-  },
-
-  zencode: {
-    name: 'zencode',
-    description: 'Expand a Zen Coding (Emmet-style) HTML abbreviation into markup',
-    parameters: { abbreviation: { type: 'string', description: 'Zen Coding abbreviation, e.g. "div#page>ul>li.item$*3>a"' } },
-    async execute({ abbreviation }) {
-      const html = expandAbbreviation(abbreviation as string);
-      if (html === null) return { error: 'Invalid abbreviation or ZenCode engine unavailable' };
-      return { html, abbreviation: abbreviation as string };
-    }
   }
 };
 
@@ -147,5 +108,5 @@ async function runTool(name: string, params: Record<string, unknown>): Promise<R
   return await tool.execute(params);
 }
 
-export { TOOLS, getTool, listTools, runTool };
+export { TOOLS, getTool, listTools, runTool, WORKSPACE_ROOT, SAFE_ROOTS, DENY_PATTERNS };
 export type { ToolParameter, ToolDefinition };

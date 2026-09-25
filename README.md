@@ -1,22 +1,78 @@
-# S-AI v6.0 — Synthetic Executive
+# S-AI — Artificial Mind · Integrated OpenWorker
 
 [![npm version](https://img.shields.io/npm/v/@saikarun/s-ai?color=6366f1&label=version)](https://www.npmjs.com/package/@saikarun/s-ai)
 [![npm downloads](https://img.shields.io/npm/dm/@saikarun/s-ai?color=22c55e)](https://www.npmjs.com/package/@saikarun/s-ai)
 [![License: MIT](https://img.shields.io/badge/license-MIT-ec4899)](LICENSE)
 [![Node](https://img.shields.io/badge/node-18%2B-2c3e50)](package.json)
-[![Build](https://img.shields.io/badge/build-passing-22c55e)](build/)
 [![CI](https://github.com/karun99/s-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/karun99/s-ai/actions/workflows/ci.yml)
+[![Security Audit](https://github.com/karun99/s-ai/actions/workflows/security.yml/badge.svg)](https://github.com/karun99/s-ai/actions/workflows/security.yml)
 [![Docker](https://github.com/karun99/s-ai/actions/workflows/docker.yml/badge.svg)](https://github.com/karun99/s-ai/actions/workflows/docker.yml)
 [![Pages](https://github.com/karun99/s-ai/actions/workflows/pages.yml/badge.svg)](https://github.com/karun99/s-ai/actions/workflows/pages.yml)
 [![Release](https://github.com/karun99/s-ai/actions/workflows/release.yml/badge.svg)](https://github.com/karun99/s-ai/actions/workflows/release.yml)
 
 > **Published:** [`@saikarun/s-ai`](https://www.npmjs.com/package/@saikarun/s-ai) | **License:** MIT | **Platform:** Node.js >= 18 | **Module:** ESM (TypeScript)
 
-A CLI-first multi-agent swarm system with **execution layer** (policy-gated tool execution with approval), **neural mapping (Digital Twin persona adaptation)**, **MCP Builder** (resource-efficient template-based MCP server creation), **Skill Creator** (customizable modular skill composition), **Research Mapper (Paperscape-style arXiv visualization)**, **Study Buddy (AI tutoring with gamified learning)**, **Bhashini multilingual AI**, crawl4ai web scraping, MCP integration, knowledge graph, and bias-reduced consensus.
+> **S-AI** is an **Artificial Mind** — a self-hosted, intelligence-first coworker that reasons across a multi-agent swarm, thinks *and* acts through a policy-gated execution layer, and ships as an **Integrated OpenWorker** harness with desktop installers, scheduled jobs, reach channels, a credentials vault, and simulated-organoid intelligence (SOI).
+
+The system fuses **execution layer** (risk-rated tool execution with approval gates), **neural mapping (Digital Twin persona adaptation)**, **SOI (Simulated Organoid Intelligence)** for memory consolidation, **MCP Builder** (resource-efficient template-based MCP server creation), **Skill Creator** (customizable modular skill composition), **Research Mapper (Paperscape-style arXiv visualization)**, **Study Buddy (AI tutoring with gamified learning)**, **Bhashini multilingual AI**, crawl4ai web scraping, MCP integration, knowledge graph, and bias-reduced consensus.
+
+**v6.1 Security:** Hardened for production — SSRF protection, filesystem & shell sandboxing, bearer-token auth, rate limiting, and a secure registry-bound execution engine, all covered by CI (gitleaks, OSV-Scanner, govulncheck, Semgrep, npm audit) and automated dependency updates via Dependabot.
 
 **v6.0 New:** The swarm now thinks *and* acts — it produces execution plans with risk-rated actions that go through approval gates before execution. S-AI evolves from a reasoning engine into a full-fledged autonomous assistant.
 
 **No advanced hardware required** — runs on any device with a browser or Node.js. Zero inference cost with OpenRouter free models. Your data stays on your device.
+
+---
+
+## Statement of need
+
+Agentic frameworks give models tools but rarely give users control or
+explainability over tool execution. Users of autonomous assistants need a
+system that reasons from multiple perspectives (not a single model opinion),
+exposes every planned action with a risk rating and an explicit approval
+gate, and runs locally so keys and private data never leave the device. S-AI
+addresses each in one package: bias-reduced consensus from a 6-7 agent swarm,
+a policy-gated execution layer (`allow` / `deny` / `require-approval`), and a
+natively installable, local-first OpenWorker harness.
+
+## AI usage disclosure
+
+Code and documentation were drafted with generative-AI assistance and reviewed
+by the human maintainer, who made the design decisions. This disclosure is
+kept in line with the JOSS AI usage policy.
+
+---
+
+## The Artificial Mind & Integrated OpenWorker
+
+S-AI is built as an **Artificial Mind** — a cohesive intelligence that combines many cognitive faculties rather than a single chat wrapper. It ships as an **Integrated OpenWorker**: a self-hosted "AI coworker" that installs natively and works for you on your own hardware.
+
+| Capability | OpenWorker delivers |
+|-----------|---------------------|
+| **Swarm Reasoning** | 6–7 agent swarm with bias-reduced consensus reaches balanced, multi-perspective conclusions |
+| **Synthetic Executive** | Plans then *acts* — risk-rated actions pass through approval gates before executing real tools |
+| **Simulated Organoid Intelligence (SOI)** | Bio-inspired, simulated neural memory & consensus modulation (software-only, no hardware) |
+| **Desktop Coworker** | Native installers for Windows (EXE/MSI), macOS (DMG), Linux, Android, and PWA |
+| **Scheduled Jobs & Automations** | `openworker` daemon runs recurring worker jobs and cron-style automations |
+| **Reach Channels** | Web, YouTube, GitHub, RSS, arXiv — with doctor health checks per channel |
+| **Credentials Vault** | Secrets stored encrypted and injected only where needed |
+| **Memory Graph** | Persistent knowledge graph + neural persona (Digital Twin) adaptation |
+| **Local-First** | Keys and data never leave your device except to the AI providers you choose |
+
+### OpenWorker CLI
+
+```bash
+openworker chat        # Start a worker session with the swarm
+openworker run "job"   # Run a one-off worker job
+openworker jobs        # Manage scheduled automated jobs
+openworker policy show # Inspect tool-use policy (allow / deny / require-approval)
+openworker vault       # Manage encrypted credentials
+openworker reach       # Configure and health-check reach channels
+openworker soi         # Inspect the simulated organoid intelligence state
+openworker daemon      # Run the resident worker service
+```
+
+The full OpenWorker harness lives in [`suite/`](suite/) and integrates directly with the S-AI engine core.
 
 ---
 
@@ -40,8 +96,8 @@ A CLI-first multi-agent swarm system with **execution layer** (policy-gated tool
 ### Minimum Requirements
 
 - **CPU:** Any 64-bit processor (ARM or x86). 32-bit systems not supported.
-- **RAM:** 2 GB minimum (CLI only). 4–8 GB recommended for the web dashboard, multiple agent swarm runs, and locally-hosted models (Ollama/Llama). Large reasoning tasks or running local LLMs benefit from 8 GB+.
-- **Disk:** 200 MB minimum for the core install (Node.js + compiled app + dashboard). ~500 MB–1.5 GB with native executables, Docker image, and additional build artifacts.
+- **RAM:** 2 GB minimum (CLI). **4 GB recommended** when running the dashboard, MCP servers, skills, and local models together.
+- **Disk:** 50 MB for core install. 200 MB with all build artifacts.
 - **Network:** Optional. Required only for AI provider calls. Fully offline with local Ollama models.
 - **OS:** Windows 10+, macOS 12+, Ubuntu 20.04+ / Debian 11+, Android 10+, any Linux with Node.js 18+.
 
@@ -216,10 +272,14 @@ services:
     restart: unless-stopped
 ```
 
-## What's in v6.0
+## What's in v6.1
 
 | Feature | Status |
 |---------|--------|
+| **Integrated OpenWorker harness** (daemon, jobs, reach, vault, policy) | **New in 6.1** |
+| **Security hardening** (SSRF, sandboxing, auth, rate limit, secure executor) | **New in 6.1** |
+| **Security CI** (gitleaks, OSV-Scanner, govulncheck, Semgrep, npm audit) | **New in 6.1** |
+| **Dependabot** across all sub-projects & ecosystems | **New in 6.1** |
 | 6-agent swarm with bias-reduced consensus | Done |
 | **Execution Layer** (policy-gated tool execution) | **New in 6.0** |
 | **7-agent swarm** (added Action Planner) | **New in 6.0** |
@@ -464,26 +524,7 @@ bash build/scripts/build-docker.sh # Just Docker
 
 ### CI/CD
 
-GitHub Actions validates every push/PR to `main` and deploys on merge. Workflows live in [`.github/workflows/`](.github/workflows):
-
-| Workflow | Trigger | What it does |
-|----------|---------|--------------|
-| [`ci.yml`](.github/workflows/ci.yml) | push & PR to `main` | Lint, type-check (`validate`), build, and run the full test suite on Node 18/20/22 |
-| [`pages.yml`](.github/workflows/pages.yml) | push to `main` / manual | Deploys the web dashboard (`public/`) to **GitHub Pages** |
-| [`docker.yml`](.github/workflows/docker.yml) | push to `main`, `v*` tags / manual | Builds & pushes the Docker image to **GHCR** (`ghcr.io/karun99/s-ai`) |
-| [`release.yml`](.github/workflows/release.yml) | `v*` tags / manual | Builds native executables and creates a GitHub Release with artifacts |
-
-### Local Validation
-
-Run the same checks CI runs locally to confirm everything is green:
-
-```bash
-npm ci --ignore-scripts   # install once
-npm run lint              # eslint (bin/)
-npm run validate          # tsc --noEmit type check
-npm run build             # compile TypeScript -> dist/
-npm run test              # node test runner (125+ tests)
-```
+GitHub Actions (`.github/workflows/build.yml`) automatically builds all platforms on push to `main` or version tags. Releases are created with all artifacts attached.
 
 ---
 

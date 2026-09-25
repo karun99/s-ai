@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { getCrawlConfig, getCacheDir, hashContent } from '../config.js';
 import type { CrawlConfig } from '../config.js';
+import { safeFetch, isPrivateUrl } from '../security/ssrf.js';
 
 interface CrawlResult {
   url: string;
@@ -26,6 +27,8 @@ interface ParsedLink {
   snippet: string;
 }
 
+const MAX_CRAWL_RESPONSE_BYTES = 5 * 1024 * 1024;
+
 class CrawlEngine {
   config: CrawlConfig;
   cacheDir: string;
@@ -41,6 +44,10 @@ class CrawlEngine {
     const urlArr = urls as string[];
     const results: CrawlResult[] = [];
     for (const url of urlArr.slice(0, (this.config.maxPages as number) || 5)) {
+      if (isPrivateUrl(url)) {
+        results.push({ url, error: 'Blocked: private/internal URL', content: '' });
+        continue;
+      }
       try {
         const cached = this._getCache(url);
         if (cached) { results.push(cached); continue; }
@@ -58,20 +65,17 @@ class CrawlEngine {
   }
 
   async _fetchAndExtract(url: string, options: { timeout?: number } = {}): Promise<CrawlResult> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), options.timeout || 30000);
     try {
-      const resp = await fetch(url, {
-        signal: controller.signal,
-        headers: { 'User-Agent': 'S-AI/2.0 (AI Research Assistant)' }
+      const resp = await safeFetch(url, {
+        timeout: options.timeout || 30_000,
+        maxResponseBytes: MAX_CRAWL_RESPONSE_BYTES,
+        maxRedirects: 5,
       });
-      clearTimeout(timeout);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const html = await resp.text();
       const content = this._extractContent(html, url);
       return { url, content, title: this._extractTitle(html), extractedAt: new Date().toISOString(), length: content.length };
     } catch (err: any) {
-      clearTimeout(timeout);
       throw err;
     }
   }
@@ -126,6 +130,7 @@ class CrawlEngine {
       const links = this._parseSearchResults(results[0]?.content || '');
       const pageResults: SearchResult[] = [];
       for (const link of links.slice(0, options.maxResults || 3)) {
+        if (isPrivateUrl(link.url)) continue;
         const pageResult = await this.crawl([link.url], options);
         if (pageResult[0]?.content) {
           pageResults.push({ title: link.title, url: link.url, snippet: link.snippet, content: pageResult[0].content });

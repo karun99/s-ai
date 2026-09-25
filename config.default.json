@@ -1,6 +1,6 @@
 {
   "$schema": "https://s-ai.app/schema/config.json",
-  "version": "5.0.0",
+  "version": "6.1.0",
   "swarm": {
     "maxAgents": 6,
     "consensusThreshold": 0.7,
@@ -143,6 +143,41 @@
     "enabled": true,
     "transport": "stdio",
     "servers": []
+  },
+  "security": {
+    "auth": {
+      "mode": "local",
+      "description": "local: auto-token for localhost, lan: token required, off: no auth"
+    },
+    "ssrf": {
+      "maxRedirects": 5,
+      "maxResponseBytes": 10485760,
+      "timeout": 30000
+    },
+    "filesystem": {
+      "workspaceRoot": "~/.s-ai/workspace",
+      "denyPatterns": [
+        "**/.ssh/**",
+        "**/.aws/**",
+        "**/.config/**",
+        "**/.gnupg/**",
+        "**/.env",
+        "**/.env.*",
+        "**/credentials",
+        "**/secrets",
+        "**/*.key",
+        "**/*.pem"
+      ]
+    },
+    "shell": {
+      "mode": "safe",
+      "description": "safe: block dangerous commands, restricted: allowlist, developer: expanded, full: unrestricted"
+    },
+    "audit": {
+      "enabled": true,
+      "redactSensitive": true,
+      "maxLogSizeMB": 100
+    }
   },
   "server": {
     "port": 3000,

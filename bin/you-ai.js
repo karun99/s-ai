@@ -12,7 +12,7 @@ const PACKAGE_ROOT = join(__dirname, '..');
 
 const HELP = `
   ╔═══════════════════════════════════════════════╗
-  ║  S-AI v6.0 - Synthetic Executive              ║
+  ║  S-AI v6.1 - Artificial Mind                   ║
   ╚═══════════════════════════════════════════════╝
 
   Usage:
@@ -1099,7 +1099,7 @@ async function cmdAudit(flags) {
 async function cmdDaemon(flags) {
   const port = parseInt(flags.port || process.env.PORT || '3000');
   const host = flags.host || '127.0.0.1';
-  console.log(`\n  S-AI Daemon v6.0 starting...`);
+  console.log(`\n  S-AI Daemon v6.1 starting...`);
   console.log(`  Dashboard: http://${host}:${port}`);
   console.log(`  Mode: Headless service with scheduled jobs\n`);
 
@@ -1125,7 +1125,7 @@ async function cmdStatus() {
   const tools = listToolMeta();
   console.log('\n  S-AI Status');
   console.log('─'.repeat(50));
-  console.log(`  Version:    6.0.0`);
+  console.log(`  Version:    6.1.0`);
   console.log(`  Node:       ${process.version}`);
   console.log(`  Provider:   ${provider.name} (${provider.defaultModel || 'default'})`);
   console.log(`  Graph:      ${graph.getStats().nodes} nodes, ${graph.getStats().edges} edges`);

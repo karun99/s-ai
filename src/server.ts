@@ -3,7 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { readFileSync, existsSync, mkdirSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import { createAuthMiddleware, generateAuthToken } from './security/auth.js';
+import { isPrivateUrl, safeFetch } from './security/ssrf.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,17 +24,45 @@ export async function createServer(options: { port?: number; root?: string } = {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
 
-  app.use((req: Request, res: Response, next: () => void) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    res.header('X-Content-Type-Options', 'nosniff');
+    res.header('X-Frame-Options', 'DENY');
+    res.header('X-XSS-Protection', '1; mode=block');
+    res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
     const origin = req.headers.origin;
     const allowed = ['http://localhost', 'http://127.0.0.1'];
     if (origin && allowed.some(a => origin.startsWith(a))) {
       res.header('Access-Control-Allow-Origin', origin);
     }
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     if (req.method === 'OPTIONS') return res.sendStatus(200);
     next();
   });
+
+  const rateLimits = new Map<string, { count: number; resetAt: number }>();
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path === '/health' || req.path === '/api/token') return next();
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const entry = rateLimits.get(ip);
+    if (entry && entry.resetAt > now) {
+      if (entry.count >= 200) {
+        return res.status(429).json({ error: 'Rate limit exceeded', retryAfter: Math.ceil((entry.resetAt - now) / 1000) });
+      }
+      entry.count++;
+    } else {
+      rateLimits.set(ip, { count: 1, resetAt: now + 60_000 });
+    }
+    next();
+  });
+
+  const authMiddleware = createAuthMiddleware();
+  app.use(authMiddleware);
 
   app.use(express.static(publicDir));
 
@@ -53,6 +83,15 @@ export async function createServer(options: { port?: number; root?: string } = {
     }
     return _graph;
   }
+
+  app.get('/api/token', (_req: Request, res: Response) => {
+    const token = generateAuthToken();
+    res.json({
+      token,
+      usage: 'Add as Authorization: Bearer <token> header or ?token=<token> query parameter',
+      note: 'Stored at ~/.s-ai/auth/server-token.json'
+    });
+  });
 
   app.post('/api/swarm/query', async (req: Request, res: Response) => {
     try {
@@ -87,17 +126,6 @@ export async function createServer(options: { port?: number; root?: string } = {
       res.status(500).json({ error: err.message });
     }
   });
-
-  function isPrivateUrl(urlStr: string): boolean {
-    try {
-      const u = new URL(urlStr);
-      const hostname = u.hostname.toLowerCase();
-      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '[::1]') return true;
-      if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.)/.test(hostname)) return true;
-      if (u.protocol !== 'http:' && u.protocol !== 'https:') return true;
-      return false;
-    } catch { return true; }
-  }
 
   app.post('/api/crawl', async (req: Request, res: Response) => {
     try {
@@ -432,18 +460,14 @@ export async function createServer(options: { port?: number; root?: string } = {
       if (!pcfg?.apiKey) return res.status(400).json({ error: `No API key configured for ${provider}. Set the environment variable.` });
       let result: any;
       if (provider === 'anthropic') {
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
+        const resp = await safeFetch('https://api.anthropic.com/v1/messages', {
           headers: { 'Content-Type': 'application/json', 'x-api-key': pcfg.apiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model, max_tokens: max_tokens || 1024, system, messages })
         });
         result = await resp.json();
       } else if (provider === 'google') {
         const baseUrl = pcfg.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
-        const resp = await fetch(`${baseUrl}/models/${model}:generateContent`, {
-          method: 'POST',
+        const resp = await safeFetch(`${baseUrl}/models/${model}:generateContent`, {
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': pcfg.apiKey },
-          body: JSON.stringify({ contents, systemInstruction, generationConfig })
         });
         result = await resp.json();
       } else {
@@ -453,10 +477,7 @@ export async function createServer(options: { port?: number; root?: string } = {
           headers['HTTP-Referer'] = req.headers.origin || 'http://localhost:3000';
           headers['X-Title'] = 'S-AI';
         }
-        const resp = await fetch(`${baseUrl}/chat/completions`, {
-          method: 'POST', headers,
-          body: JSON.stringify({ model, messages, temperature: temperature || 0.8, max_tokens: max_tokens || 1024 })
-        });
+        const resp = await safeFetch(`${baseUrl}/chat/completions`, { headers });
         result = await resp.json();
       }
       res.json(result);
@@ -470,7 +491,7 @@ export async function createServer(options: { port?: number; root?: string } = {
     try {
       const graph = await getGraph();
       const stats = graph.getStats();
-      res.json({ version: '5.1.0', uptime: process.uptime(), graph: stats, providers: { hasKey: !!(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY), bhashini: !!process.env.BHASHINI_API_KEY }, features: { researchMapper: true, bhashini: true }, port });
+      res.json({ version: '6.1.0', uptime: process.uptime(), graph: stats, providers: { hasKey: !!(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY), bhashini: !!process.env.BHASHINI_API_KEY }, features: { researchMapper: true, bhashini: true, auth: true, ssrfHardened: true }, port });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -485,10 +506,8 @@ export async function createServer(options: { port?: number; root?: string } = {
       const activeProvider = provider || getActiveProvider().name;
       const pcfg = getProviderConfig(activeProvider);
       if (!pcfg?.apiKey) return res.status(400).json({ error: `No API key configured for ${activeProvider}` });
-      const resp = await fetch(`${pcfg.baseUrl || 'https://openrouter.ai/api/v1'}/chat/completions`, {
-        method: 'POST',
+      const resp = await safeFetch(`${pcfg.baseUrl || 'https://openrouter.ai/api/v1'}/chat/completions`, {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${pcfg.apiKey}` },
-        body: JSON.stringify({ model: model || 'openai/gpt-3.5-turbo', messages: [{ role: 'user', content: message }], temperature: 0.8, max_tokens: 1024 })
       });
       const result = await resp.json() as Record<string, unknown>;
       const choices = result.choices as Array<{ message?: { content?: string } }>;
@@ -544,40 +563,7 @@ export async function createServer(options: { port?: number; root?: string } = {
     }
   });
 
-  app.post('/api/skills/install', async (req: Request, res: Response) => {
-    try {
-      const { name } = req.body;
-      if (!name) return res.status(400).json({ error: 'skill name is required' });
-      const skillsDir = join(root, 'skills');
-      const skillDir = join(skillsDir, name);
-      if (existsSync(skillDir)) return res.json({ success: true, message: 'Skill already installed' });
-      try {
-        execSync(`npm pack ${name} --pack-destination /tmp`, { stdio: 'inherit' });
-        execSync(`tar -xzf /tmp/${name}-*.tgz -C /tmp`, { stdio: 'inherit' });
-        execSync(`mv /tmp/package ${skillDir}`, { stdio: 'inherit' });
-        res.json({ success: true, message: `Skill ${name} installed` });
-      } catch {
-        res.status(500).json({ error: `Failed to install skill ${name}` });
-      }
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.delete('/api/skills/:name', async (req: Request, res: Response) => {
-    try {
-      const name = req.params.name as string;
-      const skillsDir = join(root, 'skills');
-      const skillDir = join(skillsDir, name);
-      if (!existsSync(skillDir)) return res.status(404).json({ error: 'Skill not found' });
-      rmSync(skillDir, { recursive: true, force: true });
-      res.json({ success: true, message: `Skill ${name} removed` });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.get('/health', (req: Request, res: Response) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+  app.get('/health', (_req: Request, res: Response) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
   app.get('*', (req: Request, res: Response) => {
     if (!req.path.startsWith('/api/')) res.sendFile(join(publicDir, 'index.html'));

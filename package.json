@@ -1,7 +1,7 @@
 {
   "name": "@saikarun/s-ai",
-  "version": "6.0.0",
-  "description": "Multi-agent swarm intelligence with neural mapping, research mapper (Paperscape-style arXiv visualization), Bhashini multilingual AI, crawl4ai, MCP, and bias-reduced consensus. 20+ AI providers.",
+  "version": "6.1.0",
+  "description": "An Artificial Mind & Integrated OpenWorker — multi-agent swarm intelligence with execution layer, SOI, security hardening, neural mapping, MCP Builder, Skill Creator, Research Mapper, Study Buddy, Bhashini multilingual AI, crawl4ai, MCP, and bias-reduced consensus. 20+ AI providers.",
   "type": "module",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
@@ -73,6 +73,22 @@
     "./execution/registry": {
       "types": "./dist/src/execution/registry.d.ts",
       "import": "./dist/src/execution/registry.js"
+    },
+    "./security": {
+      "types": "./dist/src/security/index.d.ts",
+      "import": "./dist/src/security/index.js"
+    },
+    "./security/auth": {
+      "types": "./dist/src/security/auth.d.ts",
+      "import": "./dist/src/security/auth.js"
+    },
+    "./security/ssrf": {
+      "types": "./dist/src/security/ssrf.d.ts",
+      "import": "./dist/src/security/ssrf.js"
+    },
+    "./security/sandbox": {
+      "types": "./dist/src/security/sandbox.d.ts",
+      "import": "./dist/src/security/sandbox.js"
     }
   },
   "bin": {
@@ -97,7 +113,7 @@
     "pretest": "npm run build && npm run validate",
     "prepare": "node -e \"require('fs').existsSync('dist/src/index.js') || require('child_process').execSync('npm run build', { stdio: 'inherit' })\"",
     "prepack": "node -e \"require('fs').existsSync('dist/src/index.js') || (console.error('Missing dist/ — run build first'), process.exit(1))\"",
-    "postinstall": "node -e \"const fs=require('fs'); if (!fs.existsSync('dist/src/index.js')) { console.log('  Building S-AI from source...'); require('child_process').execSync('npm run build', { stdio: 'inherit' }); } console.log('  S-AI v5.1.0 installed. Run: s-ai setup')\""
+    "postinstall": "node -e \"const fs=require('fs'); if (!fs.existsSync('dist/src/index.js')) { console.log('  Building S-AI from source...'); require('child_process').execSync('npm run build', { stdio: 'inherit' }); } console.log('  S-AI v6.1.0 installed. Run: s-ai setup')\""
   },
   "engines": {
     "node": ">=18"

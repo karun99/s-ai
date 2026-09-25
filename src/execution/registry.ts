@@ -1,20 +1,49 @@
-/**
- * Tool Registry — central catalog of all executable tools with risk metadata.
- *
- * Every tool is classified by risk level, category, and whether it's reversible.
- * The registry is used by the ExecutionEngine to route actions through the
- * policy gate and approval system.
- */
-import type { ToolMetadata, RiskLevel, ToolCategory } from './types.js';
+import { z } from 'zod';
+import type { ToolMetadata, RiskLevel, ToolCategory, ToolParamDef } from './types.js';
 
 const REGISTRY = new Map<string, ToolMetadata>();
+const ZOD_SCHEMAS = new Map<string, z.ZodObject<Record<string, z.ZodTypeAny>>>();
 
 function registerTool(meta: ToolMetadata): void {
   REGISTRY.set(meta.name, meta);
+  ZOD_SCHEMAS.set(meta.name, buildZodSchema(meta.params));
+}
+
+function buildZodSchema(params: Record<string, ToolParamDef>): z.ZodObject<Record<string, z.ZodTypeAny>> {
+  const shape: Record<string, z.ZodTypeAny> = {};
+  for (const [key, def] of Object.entries(params)) {
+    let field: z.ZodTypeAny;
+    switch (def.type) {
+      case 'string': field = z.string(); break;
+      case 'number': field = z.number(); break;
+      case 'boolean': field = z.boolean(); break;
+      case 'object': field = z.record(z.unknown()); break;
+      case 'array': field = z.array(z.unknown()); break;
+      default: field = z.unknown();
+    }
+    if (def.enum) field = z.enum(def.enum as [string, ...string[]]);
+    shape[key] = def.required ? field : field.optional();
+  }
+  return z.object(shape);
 }
 
 export function getToolMeta(name: string): ToolMetadata | undefined {
   return REGISTRY.get(name);
+}
+
+export function getToolSchema(name: string): z.ZodObject<Record<string, z.ZodTypeAny>> | undefined {
+  return ZOD_SCHEMAS.get(name);
+}
+
+export function validateToolParams(name: string, params: Record<string, unknown>): { valid: boolean; error?: string } {
+  const schema = ZOD_SCHEMAS.get(name);
+  if (!schema) return { valid: false, error: `Unknown tool: ${name}` };
+  try {
+    schema.parse(params);
+    return { valid: true };
+  } catch (err) {
+    return { valid: false, error: (err as Error).message };
+  }
 }
 
 export function listToolMeta(): ToolMetadata[] {
@@ -32,10 +61,6 @@ export function getToolsByCategory(cat: ToolCategory): ToolMetadata[] {
 export function getRiskForTool(name: string): RiskLevel {
   return REGISTRY.get(name)?.riskLevel ?? 'high';
 }
-
-/* -------------------------------------------------------------------------- */
-/*  Built-in tool registrations                                               */
-/* -------------------------------------------------------------------------- */
 
 registerTool({
   name: 'readFile',

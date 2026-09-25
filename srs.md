@@ -18,14 +18,14 @@
 ### 1.1 Purpose
 OpenWorker Suite packages the You-AI / S-AI multi-agent engine as a self-hosted "AI coworker"
 product with first-class installers for Windows, macOS, Linux (shell), and Android, under a
-strict minimum-resource envelope. It is modeled on the aisuite → OpenWorker relationship
-(unified provider layer + desktop harness), and integrates an Agent-Reach-style capability
+strict minimum-resource envelope. It follows a unified provider layer + desktop harness
+architecture, and integrates an Agent-Reach-style capability
 layer plus a new **Simulated Organoid Intelligence (SOI)** module.
 
 ### 1.2 Scope
 In scope:
 - Desktop worker runtime (chat, tasks, scheduled automations, research) reusing S-AI core.
-- Unified multi-provider LLM routing (aisuite-style `provider:model` strings).
+- Unified multi-provider LLM routing (`provider:model` strings).
 - Reach channel registry (web, YouTube, GitHub, RSS, arXiv, …) with doctor health checks.
 - SOI: a software-only simulation of organoid-inspired neural dynamics for memory
   consolidation and consensus modulation. Simulated version only — no biological hardware.
@@ -37,16 +37,15 @@ Out of scope (v1): iOS app, cloud sync between devices, voice wakeup always-list
 biological/hardware organoid interfaces, team/multi-user auth server.
 
 ### 1.3 References
-1. aisuite — unified chat-completions across providers (github.com/andrewyng/aisuite).
-2. OpenWorker (aisuite companion) — desktop AI coworker distribution model.
-3. Agent-Reach — capability-layer pattern: ordered backend lists per channel, `doctor`
+1. OpenWorker — desktop AI coworker distribution model.
+2. Agent-Reach — capability-layer pattern: ordered backend lists per channel, `doctor`
    probing, safe-by-default install, SKILL.md export (Panniantong/Agent-Reach).
-4. You-AI project site — product ingredients (you-ai-project.netlify.app).
-5. S-AI v5.1 CLI — existing engine (`@saikarun/s-ai`, npm).
-6. Collabuild 9-stage MAS pipeline (research paper → working prototype).
-7. Izhikevich (2003) simple spiking model; Maass et al. liquid state machines; STDP literature
+3. You-AI project site — product ingredients (you-ai-project.netlify.app).
+4. S-AI v5.1 CLI — existing engine (`@saikarun/s-ai`, npm).
+5. Collabuild 9-stage MAS pipeline (research paper → working prototype).
+6. Izhikevich (2003) simple spiking model; Maass et al. liquid state machines; STDP literature
    — theoretical basis for SOI (see docs/soi-spec.md).
-8. Duet — Digital Twin Technology (`nsktech994/Duet--Digital-Twin-Technology`) — owner's
+7. Duet — Digital Twin Technology (`nsktech994/Duet--Digital-Twin-Technology`) — owner's
    personified-intelligence application; its **Duet Protocol** (`[[PRIMARY]]` / `[[META]]` /
    `[[RESPONSE]]` streams over a persona-seeded twin) defines the macro-architecture of SOI.
 
@@ -86,7 +85,7 @@ A single Node.js codebase distributed four ways:
 │   6-agent swarm · neural mapping persona · knowledge graph     │
 │   study buddy · research mapper · bhashini · MCP · crawl       │
 ├────────────────────────────────────────────────────────────────┤
-│   PROVIDERS (20+, aisuite-style routing)   REACH BACKENDS      │
+│   PROVIDERS (20+, unified routing)            REACH BACKENDS      │
 │   openrouter openai anthropic google ollama  jina gh yt-dlp    │
 │   grok kimi cohere bedrock vertex +15 more   rss arxiv …       │
 └────────────────────────────────────────────────────────────────┘
@@ -98,7 +97,7 @@ engine. Users who already run `s-ai` migrate by importing config (FR-C9).
 ### 2.2 Design principles
 1. Minimum resources — no Electron, no bundled browser, no resident daemon unless serving.
 2. Local-first — keys and data never leave the device except to chosen AI providers.
-3. Safe-by-default — destructive tools require explicit approval (aisuite-style policy).
+3. Safe-by-default — destructive tools require explicit approval.
 4. Capability layer, not wrapper — Reach routes to upstream tools; no reimplementation.
 5. Simulation honesty — SOI is labeled everywhere as *simulated*, inspired-by-biology
    engineering (reservoir computing), not biological computation; its personified behavior
@@ -119,7 +118,7 @@ Priority classes: **M** = must (v1 gate), **S** = should, **C** = could/stretch.
 
 ### 3.1 Core (engine reuse & routing)
 - **FR-C1 (M)** Route all model calls through unified `provider:model` identifiers
-  (aisuite convention), e.g. `openrouter:meta-llama/...`, `ollama:llama3`.
+  (e.g. `openrouter:meta-llama/...`, `ollama:llama3`).
 - **FR-C2 (M)** Expose existing commands behind the `openworker` binary:
   `ask, serve, swarm, persona, graph, crawl, search, mcp, provider, skill, engine,
   research, bhashini, reach, status, study` (parity with s-ai v5.1 surface).
@@ -327,7 +326,7 @@ Draft workflow skeleton specified in packaging doc §CI; tags `v0.x.y`; prerelea
 
 | Owner directive | Coverage |
 |---|---|
-| "use aisuite as reference" | FR-C1..C3 (unified routing), §1.3[1] |
+| "use unified multi-provider routing" | FR-C1..C3 (unified routing) |
 | "windows installer / mac installer / linux shell / android" | §6, FR-D1, packaging doc, M5/M6 |
 | "minimum resources" | NFR-1..7, FR-S5 |
 | "my ingredients (you-ai-project.netlify.app)" | §2.1 engine reuse, FR-C4..C8, U1; ingredient table below |
