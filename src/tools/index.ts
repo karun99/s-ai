@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { isPathInSandbox, WORKSPACE_ROOT, SAFE_ROOTS, DENY_PATTERNS } from '../security/sandbox.js';
+import { expandAbbreviation } from './zencode.js';
 
 interface ToolParameter {
   type: string;
@@ -95,6 +96,24 @@ const TOOLS: Record<string, ToolDefinition> = {
       }
       walk(path as string);
       return { results, count: results.length };
+    }
+  },
+
+  zencode: {
+    name: 'zencode',
+    description: 'Expand a Zen Coding / Emmet-style abbreviation into HTML markup',
+    parameters: {
+      abbreviation: { type: 'string', description: 'Abbreviation to expand, e.g. "div#page>ul>li*3>a"' }
+    },
+    async execute({ abbreviation }) {
+      if (!abbreviation || typeof abbreviation !== 'string') {
+        return { error: 'abbreviation is required' };
+      }
+      const html = expandAbbreviation(abbreviation as string);
+      if (html === null) {
+        return { error: `Could not expand abbreviation: ${abbreviation}` };
+      }
+      return { html, abbreviation };
     }
   }
 };
