@@ -12,10 +12,30 @@ export function json(data, status = 200) {
 }
 
 export async function readJson(request, maxBytes = 1_000_000) {
-  const raw = await request.text();
-  if (new TextEncoder().encode(raw).byteLength > maxBytes) {
-    throw Object.assign(new Error("Request body exceeds the 1 MB limit."), { status: 413 });
+  const chunks = [];
+  let totalBytes = 0;
+  if (request.body) {
+    const reader = request.body.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > maxBytes) {
+          try { await reader.cancel(); } catch { /* The limit error is authoritative. */ }
+          throw Object.assign(new Error("Request body exceeds the allowed size limit."), { status: 413 });
+        }
+        chunks.push(value);
+      }
+    } catch (error) {
+      if (error?.status === 413) throw error;
+      throw Object.assign(new Error("Request body could not be read."), { status: 400 });
+    }
   }
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  const raw = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
   try {
     return JSON.parse(raw);
   } catch {

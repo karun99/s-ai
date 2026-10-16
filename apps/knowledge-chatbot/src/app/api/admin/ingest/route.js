@@ -11,6 +11,7 @@ export async function POST(request) {
   if (!adminAuthorized(request)) return json({ error: "Admin authorization required." }, 401);
   try {
     const body = await readJson(request, 8_000);
+    if (!body || typeof body !== "object" || Array.isArray(body)) return json({ error: "Request body must be a JSON object." }, 400);
     if (typeof body.url !== "string" || body.url.length > 2048) return json({ error: "Provide a valid public webpage URL." }, 400);
     const page = await fetchPage(body.url);
     const result = await ingestDocument({ ...page, trust: "user-provided" });

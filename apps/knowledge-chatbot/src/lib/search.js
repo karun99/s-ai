@@ -1,14 +1,15 @@
-import { assertPublicHttpUrl } from "./ssrf.js";
+import { fetchPublic } from "./ssrf.js";
 import * as cheerio from "cheerio";
 
 export async function searchWeb(query, limit = 5) {
   const endpoint = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query);
-  const response = await fetch(await assertPublicHttpUrl(endpoint), {
-    signal: AbortSignal.timeout(8_000),
+  const response = await fetchPublic(endpoint, {
+    timeoutMs: 8_000,
+    maxBytes: 1_000_000,
     headers: { "User-Agent": "S-AI-KnowledgeBot/0.1" },
   });
   if (!response.ok) throw new Error("Web search returned HTTP " + response.status + ".");
-  const html = await response.text();
+  const html = new TextDecoder("utf-8", { fatal: false }).decode(response.body);
   const $ = cheerio.load(html);
   const results = [];
   $(".result").each((_, element) => {

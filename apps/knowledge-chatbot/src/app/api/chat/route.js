@@ -12,6 +12,7 @@ export async function POST(request) {
   if (blocked) return blocked;
   try {
     const body = await readJson(request, 32_000);
+    if (!body || typeof body !== "object" || Array.isArray(body)) return json({ error: "Request body must be a JSON object." }, 400);
     const message = typeof body.message === "string" ? body.message.trim() : "";
     if (!message || message.length > 4_000) return json({ error: "Enter a question up to 4,000 characters." }, 400);
     const history = normalizeHistory(body.history);

@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: { serverComponentsExternalPackages: ["cheerio"] },
+  serverExternalPackages: ["cheerio"],
   poweredByHeader: false,
   async headers() {
     return [

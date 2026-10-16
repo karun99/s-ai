@@ -16,7 +16,7 @@ Open `http://localhost:3000`. Configure at least one chat provider and one embed
 
 1. Import `karun99/s-ai` into Vercel.
 2. Set the project **Root Directory** to `apps/knowledge-chatbot`.
-3. Use Node.js 20 or newer and the default Next.js build settings.
+3. Use Node.js 20.9 or newer and the default Next.js build settings.
 4. Add provider, embedding, storage, and admin variables from `.env.example` in the Vercel project settings.
 5. Deploy, then open the project URL and index public pages with the admin token.
 
